@@ -63,7 +63,7 @@ function inform!(t::Tree)
     end
 end
 
-@inline function get_accel(t::Tree, pix::Int64, alpha2::Float64, eps2::Float64)
+@inline function get_accel(t::Tree, pix::Int64, alpha2::Float64, eps2::Float64, MN::Int64)
     stack_ix = 1
     t.stack[stack_ix] = 1
     ax = 0.0
@@ -74,6 +74,23 @@ end
         nix = t.stack[stack_ix]
         stack_ix -= 1
         n = t.nodes[nix]
+
+        if n.fix-n.iix+1 < MN
+            # try direct summation
+            for j in n.iix:n.fix
+                p2 = t.particles[j]
+                dx = p2.x - p.x
+                dy = p2.y - p.y
+                dz = p2.z - p.z
+                dr2 = dx*dx + dy*dy + dz*dz + eps2
+                fac = p2.m/dr2/sqrt(dr2)
+                ax += dx*fac
+                ay += dy*fac
+                az += dz*fac                    
+            end
+            continue
+        end
+
         dx = n.x - p.x
         dy = n.y - p.y
         dz = n.z - p.z
@@ -113,9 +130,78 @@ end
     ax, ay, az
 end
 
-function get_all_accel!(t::Tree, alpha2::Float64, eps2::Float64, ax::Vector{Float64}, ay::Vector{Float64}, az::Vector{Float64})
+@inline function get_accel_rel(t::Tree, pix::Int64, alpha2::Float64, eps2::Float64, MN::Int64, oax,oay,oaz)
+    stack_ix = 1
+    t.stack[stack_ix] = 1
+    ax = 0.0
+    ay = 0.0
+    az = 0.0
+    p = t.particles[pix]
+    oa = sqrt(oax*oax+oay*oay+oaz*oaz)
+    @inbounds while stack_ix > 0
+        nix = t.stack[stack_ix]
+        stack_ix -= 1
+        n = t.nodes[nix]
+
+        if n.fix-n.iix+1 < MN
+            # try direct summation
+            for j in n.iix:n.fix
+                p2 = t.particles[j]
+                dx = p2.x - p.x
+                dy = p2.y - p.y
+                dz = p2.z - p.z
+                dr2 = dx*dx + dy*dy + dz*dz + eps2
+                fac = p2.m/dr2/sqrt(dr2)
+                ax += dx*fac
+                ay += dy*fac
+                az += dz*fac                    
+            end
+            continue
+        end
+
+        dx = n.x - p.x
+        dy = n.y - p.y
+        dz = n.z - p.z
+        dr2 = dx*dx + dy*dy + dz*dz + eps2
+        na = n.m/dr2
+        if na*n.l*n.l/dr2 > oa*alpha2
+            # open criterion failed, we should try to open this node
+            if n.cix1 > 0
+                stack_ix += 1
+                t.stack[stack_ix] = n.cix1
+            end
+            if n.cix2 > 0
+                stack_ix += 1
+                t.stack[stack_ix] = n.cix2
+            end
+            if n.cix1 < 0 && n.cix2 < 0
+                # try direct summation
+                for j in n.iix:n.fix
+                    p2 = t.particles[j]
+                    dx = p2.x - p.x
+                    dy = p2.y - p.y
+                    dz = p2.z - p.z
+                    dr2 = dx*dx + dy*dy + dz*dz + eps2
+                    fac = p2.m/dr2/sqrt(dr2)
+                    ax += dx*fac
+                    ay += dy*fac
+                    az += dz*fac                    
+                end
+            end
+            continue
+        end
+        # open criterion succeeded
+        fac = n.m/dr2/sqrt(dr2)
+        ax += dx*fac
+        ay += dy*fac
+        az += dz*fac
+    end
+    ax, ay, az
+end
+
+function get_all_accel!(t::Tree, alpha2::Float64, eps2::Float64, ax::Vector{Float64}, ay::Vector{Float64}, az::Vector{Float64}, NM::Int64)
     @inbounds for i in 1:length(t.particles)
-        tax, tay, taz = get_accel(t, i, alpha2, eps2)
+        tax, tay, taz = get_accel(t, i, alpha2, eps2, NM)
         ax[i] = tax
         ay[i] = tay
         az[i] = taz
@@ -123,3 +209,12 @@ function get_all_accel!(t::Tree, alpha2::Float64, eps2::Float64, ax::Vector{Floa
     nothing
 end    
 
+function get_all_accel_rel!(t::Tree, alpha2::Float64, eps2::Float64, ax::Vector{Float64}, ay::Vector{Float64}, az::Vector{Float64}, NM::Int64)
+    @inbounds for i in 1:length(t.particles)
+        tax, tay, taz = get_accel_rel(t, i, alpha2, eps2, NM, ax[i],ay[i],az[i])
+        ax[i] = tax
+        ay[i] = tay
+        az[i] = taz
+    end
+    nothing
+end    
