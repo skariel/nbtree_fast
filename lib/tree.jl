@@ -4,40 +4,31 @@ immutable Node
     y::Float64
     z::Float64
     m::Float64
-    l::Float64 # maximal cell side length
+    l::Float64 # maximal geometrical dimension
+    maxx::Float64
+    minx::Float64
+    maxy::Float64
+    miny::Float64
+    maxz::Float64
+    minz::Float64
+    dir::Int64 # direction node should be splitted (mod 3, 0==x, 1==y, 2==z)
     pix::Int64 # parent index
     iix::Int64 # first particle index
-    pnum::Int64 # number of particles
+    fix::Int64 # final particle index
     cix1::Int64 # first child index
     cix2::Int64 # second child index
 end
 
-immutable _GroupingStackData
-    iix::Int64 # initial particle index
-    fix::Int64 # final particle index
-    dir::Int64 # direction, mod 3 (0==x, 1==y, 2==z)
-    midx::Float64 # split coordinate
-    midy::Float64
-    midz::Float64
-    pix::Int64 # parent node index
-    slx::Float64 # cell side length (nothing to do with actual particle inside!)
-    sly::Float64
-    slz::Float64
-end
-
-
 type Tree
     nodes::Vector{Node}
     particles::Vector{Particle}
-    grouping_stack::Vector{_GroupingStackData}
-    nodes_stack::Vector{Int64}
+    stack::Vector{Int64}
     num_nodes_used::Int64
 end
 
 function Tree(particles)
     nodes = Array{Node}(round(Int64, 4.8*length(particles)))
-    Tree(nodes, particles,
-        Array{_GroupingStackData}(10000), Array{Int64}(10000), 0)
+    Tree(nodes, particles, Array{Int64}(10000), 0)
 end
 
 function getminmax(t::Tree)
@@ -64,28 +55,31 @@ function getminmax(t::Tree)
             maxz=p.z
         end
     end
-    minx,maxx, miny,maxy, minz,maxz
+    dx = (maxx-minx)*0.01
+    dy = (maxy-miny)*0.01
+    dz = (maxz-minz)*0.01
+    minx-dx,maxx+dx, miny-dy,maxy+dy, minz-dz,maxz+dz
 end
 
-function get_sl_mid_low(data, dir)
-    if dir==0
-        data.slx/2, data.midx-data.slx/4, data.sly, data.midy, data.slz, data.midz
-    elseif dir==1
-        data.slx, data.midx, data.sly/2, data.midy-data.sly/4, data.slz, data.midz        
-    elseif dir==2
-        data.slx, data.midx, data.sly, data.midy, data.slz/2, data.midz-data.slz/4
+function get_minmax_low(n::Node)
+    if n.dir==0
+        n.minx,n.maxx-(n.maxx-n.minx)/2, n.miny,n.maxy, n.minz,n.maxz
+    elseif n.dir==1
+        n.minx,n.maxx, n.miny,n.maxy-(n.maxy-n.miny)/2, n.minz,n.maxz
+    elseif n.dir==2
+        n.minx,n.maxx, n.miny,n.maxy, n.minz,n.maxz-(n.maxz-n.minz)/2
     else
         error("bad direction!")
     end
 end
 
-function get_sl_mid_high(data, dir)
-    if dir==0
-        data.slx/2, data.midx+data.slx/4, data.sly, data.midy, data.slz, data.midz
-    elseif dir==1
-        data.slx, data.midx, data.sly/2, data.midy+data.sly/4, data.slz, data.midz        
-    elseif dir==2
-        data.slx, data.midx, data.sly, data.midy, data.slz/2, data.midz+data.slz/4
+function get_minmax_high(n::Node)
+    if n.dir==0
+        n.minx+(n.maxx-n.minx)/2,n.maxx, n.miny,n.maxy, n.minz,n.maxz
+    elseif n.dir==1
+        n.minx,n.maxx, n.miny+(n.maxy-n.miny)/2,n.maxy, n.minz,n.maxz
+    elseif n.dir==2
+        n.minx,n.maxx, n.miny,n.maxy, n.minz+(n.maxz-n.minz)/2,n.maxz
     else
         error("bad direction!")
     end
@@ -93,157 +87,158 @@ end
 
 function group!(t::Tree, S::Int64)
     minx,maxx, miny,maxy, minz,maxz = getminmax(t)
-    newsl = max(maxx-minx, maxy-miny, maxz-minz)
+    l = max(maxx-minx, maxy-miny, maxz-minz)
 
     # create root node
     node_ix = 1
-    @inbounds t.nodes[node_ix] = Node(
+    t.nodes[node_ix] = Node(
         0.0,                 # x::Float64
         0.0,                 # y::Float64
         0.0,                 # z::Float64
         0.0,                 # m::Float64
-        newsl,               # l::Float64 # maximal cell side length
+        l,
+        maxx,
+        minx,
+        maxy,
+        miny,
+        maxz,
+        minz,
+        0,                   # direction
         -1,                  # pix::Int64 # parent index
-        1,                   # fpix::Int64 # first particle index
-        length(t.particles), # pnum::Int64 # number of particles
+        1,                   # iix::Int64 # first particle index
+        length(t.particles), # fix
         -1,                  # cix1::Int64 # first child index
         -1,                  # cix2::Int64 # second child index        
     )
-
-    # node in the stack are splitted, add root to stack
+    # stack contains parents to be splitted
+    # add root to stack
     stack_ix = 1
-    @inbounds t.grouping_stack[stack_ix] = _GroupingStackData(
-       1,                    # iix::Int64 # initial particle index
-       length(t.particles),  # fix::Int64 # final particle index
-       0,                    # dir::Int64 # direction, mod 3 (0==x, 1==y, 2==z)
-       0.5*(minx+maxx),      # mid::Float64 # split coordinate
-       0.5*(miny+maxy),      # mid::Float64 # split coordinate
-       0.5*(minz+maxz),      # mid::Float64 # split coordinate
-       node_ix,              # pix::Int64 # parent node index
-       maxx-minx,            # sl::Float64 # cell side length (nothing to do with actual particle inside!)
-       maxy-miny,            # sl::Float64 # cell side length (nothing to do with actual particle inside!)
-       maxz-minz,            # sl::Float64 # cell side length (nothing to do with actual particle inside!)
-    )
+    t.stack[stack_ix] = 1
 
     @inbounds while stack_ix > 0
-        stack = t.grouping_stack[stack_ix]
+        # pop node to split
+        pix = t.stack[stack_ix]  # parent index to be splitted
+        pn = t.nodes[pix]        # parent node to be splitted
         stack_ix -= 1
 
-        split = splitdir!(stack.iix, stack.fix, t.particles, stack, stack.dir)
+        split = splitdir!(t.particles, pn)
 
-        if split >= stack.iix
+        if split >= pn.iix
             # we have a left child!
             # lets create it...
             node_ix += 1
-            pnum = split-stack.iix+1 # particle number
-            slx,midx, sly,midy, slz,midz = get_sl_mid_low(stack, stack.dir)
-            newsl = max(slz,sly,slz)
+            minx,maxx, miny,maxy, minz,maxz = get_minmax_low(pn)
+            l = max(maxx-minx, maxy-miny, maxz-minz)
             t.nodes[node_ix] = Node(
                 0.0,               # x::Float64
                 0.0,               # y::Float64
                 0.0,               # z::Float64
                 0.0,               # m::Float64
-                newsl,             # l::Float64 # maximal cell side length
-                stack.pix,         # pix::Int64 # parent index
-                stack.iix,         # iix::Int64 # first particle index
-                pnum,              # pnum::Int64 # number of particles
+                l,
+                maxx,
+                minx,
+                maxy,
+                miny,
+                maxz,
+                minz,
+                (pn.dir+1)%3,
+                pix,               # pix::Int64 # parent index
+                pn.iix,            # iix::Int64 # first particle index
+                split,             # pnum::Int64 # number of particles
                 -1,                # cix1::Int64 # first child index
                 -1,                # cix2::Int64 # second child index        
             )
-            if pnum > S
-                # we have enough particles to pslit this node
+            if split-pn.iix+1 > S # comparing number of particles
+                # we have enough particles to split this node
                 # push it to the stack!
                 stack_ix += 1
-                t.grouping_stack[stack_ix] = _GroupingStackData(
-                    stack.iix,           # iix::Int64 # initial particle index
-                    split,               # fix::Int64 # final particle index
-                    (stack.dir+1)%3,     # dir::Int64 # direction (1==x, 2==y, 3==z)
-                    midx,                # mid::Float64 # split coordinate
-                    midy,                # mid::Float64 # split coordinate
-                    midz,                # mid::Float64 # split coordinate
-                    node_ix,             # pix::Int64 # parent node index
-                    slx,                 # sl::Float64 # cell side length (nothing to do with actual particle inside!)
-                    sly,                 # sl::Float64 # cell side length (nothing to do with actual particle inside!)
-                    slz,                 # sl::Float64 # cell side length (nothing to do with actual particle inside!)
-                )
+                t.stack[stack_ix] = node_ix
             else
                 # node has not enough particles to be splitted
                 # tell the particles of their new parent!
-                for i in stack.iix:split
+                for i in pn.iix:split
                     p = t.particles[i]
                     t.particles[i] = Particle(p.x,p.y,p.z,p.m,node_ix)
                 end
             end
             # update parent node that it has a new child
-            pn = t.nodes[stack.pix]
-            t.nodes[stack.pix] = Node(
+            t.nodes[pix] = Node(
                 pn.x,
                 pn.y,
                 pn.z,
                 pn.m,
                 pn.l,
+                pn.maxx,
+                pn.minx,
+                pn.maxy,
+                pn.miny,
+                pn.maxz,
+                pn.minz,
+                pn.dir,
                 pn.pix,
                 pn.iix,
-                pn.pnum,
+                pn.fix,
                 node_ix, ### <<<--- this is the update!!!
                 pn.cix2, 
             )
         end
 
-        if split < stack.fix
+        if split < pn.fix
             # we have a right child!
             # lets create it...
-            node_ix += 1
-            pnum = stack.fix-split # particle number
-            slx,midx, sly,midy, slz,midz = get_sl_mid_high(stack, stack.dir)
-            newsl = max(slx,sly,slz)
+            node_ix += 1            
+            minx,maxx, miny,maxy, minz,maxz = get_minmax_high(pn)
+            l = max(maxx-minx, maxy-miny, maxz-minz)
             t.nodes[node_ix] = Node(
-                0.0,               # x::Float64
-                0.0,               # y::Float64
-                0.0,               # z::Float64
-                0.0,               # m::Float64
-                newsl,             # l::Float64 # maximal 1d separation between particles (not the node side length!)
-                stack.pix,         # pix::Int64 # parent index
-                split+1,           # iix::Int64 # first particle index
-                pnum,              # pnum::Int64 # number of particles
-                -1,                # cix1::Int64 # first child index
-                -1,                # cix2::Int64 # second child index        
+                0.0,                 # x::Float64
+                0.0,                 # y::Float64
+                0.0,                 # z::Float64
+                0.0,                 # m::Float64
+                l,
+                maxx,
+                minx,
+                maxy,
+                miny,
+                maxz,
+                minz,
+                (pn.dir+1)%3,
+                pix,                 # pix::Int64 # parent index
+                split+1,             # iix::Int64 # first particle index
+                pn.fix,                # pnum::Int64 # number of particles
+                -1,                  # cix1::Int64 # first child index
+                -1,                  # cix2::Int64 # second child index        
             )
-            if pnum > S
+            if pn.fix-split > S # comparing number of particles
                 # we have enough particles to pslit this node
                 # push it to the stack!
                 stack_ix += 1
-                t.grouping_stack[stack_ix] = _GroupingStackData(
-                    split+1,             # iix::Int64 # initial particle index
-                    stack.fix,           # fix::Int64 # final particle index
-                    (stack.dir+1)%3,     # dir::Int64 # direction (1==x, 2==y, 3==z)
-                    midx,                # mid::Float64 # split coordinate
-                    midy,                # mid::Float64 # split coordinate
-                    midz,                # mid::Float64 # split coordinate
-                    node_ix,             # pix::Int64 # parent node index
-                    slx,                 # sl::Float64 # cell side length (nothing to do with actual particle inside!)
-                    sly,                 # sl::Float64 # cell side length (nothing to do with actual particle inside!)
-                    slz,                 # sl::Float64 # cell side length (nothing to do with actual particle inside!)
-                )
+                t.stack[stack_ix] = node_ix
             else
                 # node has not enough particles to be splitted
                 # tell the particles of their new parent!
-                for i in (split+1):stack.fix
+                for i in (split+1):pn.fix
                     p = t.particles[i]
                     t.particles[i] = Particle(p.x,p.y,p.z,p.m,node_ix)
                 end
             end
             # update parent node that it has a new child
-            pn = t.nodes[stack.pix]
-            t.nodes[stack.pix] = Node(
+            pn = t.nodes[pix]
+            t.nodes[pix] = Node(
                 pn.x,
                 pn.y,
                 pn.z,
                 pn.m,
                 pn.l,
+                pn.maxx,
+                pn.minx,
+                pn.maxy,
+                pn.miny,
+                pn.maxz,
+                pn.minz,
+                pn.dir,
                 pn.pix,
                 pn.iix,
-                pn.pnum,
+                pn.fix,
                 pn.cix1,
                 node_ix, ### <<<--- this is the update!!!
             )
@@ -270,13 +265,13 @@ end
 @inline splity!(from_ix, to_ix, x, at) = split!(from_ix, to_ix, x, at, (u,v)->u.y<v)
 @inline splitz!(from_ix, to_ix, x, at) = split!(from_ix, to_ix, x, at, (u,v)->u.z<v)
 
-@inline function splitdir!(from_ix, to_ix, x, stack_at, dir)
-    if dir==0
-        splitx!(from_ix, to_ix, x, stack_at.midx)
-    elseif dir==1
-        splity!(from_ix, to_ix, x, stack_at.midy)
-    elseif dir==2
-        splitz!(from_ix, to_ix, x, stack_at.midz)
+@inline function splitdir!(x, node)
+    if node.dir==0
+        splitx!(node.iix, node.fix, x, (node.minx+node.maxx)/2)
+    elseif node.dir==1
+        splity!(node.iix, node.fix, x, (node.miny+node.maxy)/2)
+    elseif node.dir==2
+        splitz!(node.iix, node.fix, x, (node.minz+node.maxz)/2)
     else
         error("bad direction!")
     end

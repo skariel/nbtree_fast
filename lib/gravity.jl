@@ -8,7 +8,7 @@ function inform!(t::Tree)
         n = t.nodes[i]
         if n.cix1<0 && n.cix2<0
             # leaf node, just use particles
-            for j in n.iix:(n.iix+n.pnum-1)
+            for j in n.iix:n.fix
                 p = t.particles[j]
                 x += p.x*p.m
                 y += p.y*p.m
@@ -46,10 +46,17 @@ function inform!(t::Tree)
             y, # y::Float64
             z, # z::Float64
             m, # m::Float64
-            n.l, # l::Float64 # maximal 1d separation between particles (not the node side length!)
+            n.l,
+            n.maxx,
+            n.minx,
+            n.maxy,
+            n.miny,
+            n.maxz,
+            n.minz,
+            n.dir,
             n.pix, # pix::Int64 # parent index
             n.iix, # iix::Int64 # first particle index
-            n.pnum, # pnum::Int64 # number of particles
+            n.fix, # 
             n.cix1, # cix1::Int64 # first child index
             n.cix2, # cix2::Int64 # second child index            
         )
@@ -58,13 +65,13 @@ end
 
 @inline function get_accel(t::Tree, pix::Int64, alpha2::Float64, eps2::Float64)
     stack_ix = 1
-    t.nodes_stack[stack_ix] = 1
+    t.stack[stack_ix] = 1
     ax = 0.0
     ay = 0.0
     az = 0.0
     p = t.particles[pix]
     @inbounds while stack_ix > 0
-        nix = t.nodes_stack[stack_ix]
+        nix = t.stack[stack_ix]
         stack_ix -= 1
         n = t.nodes[nix]
         dx = n.x - p.x
@@ -75,15 +82,15 @@ end
             # open criterion failed, we should try to open this node
             if n.cix1 > 0
                 stack_ix += 1
-                t.nodes_stack[stack_ix] = n.cix1
+                t.stack[stack_ix] = n.cix1
             end
             if n.cix2 > 0
                 stack_ix += 1
-                t.nodes_stack[stack_ix] = n.cix2
+                t.stack[stack_ix] = n.cix2
             end
             if n.cix1 < 0 && n.cix2 < 0
                 # try direct summation
-                for j in n.iix:(n.iix+n.pnum-1)
+                for j in n.iix:n.fix
                     p2 = t.particles[j]
                     dx = p2.x - p.x
                     dy = p2.y - p.y
