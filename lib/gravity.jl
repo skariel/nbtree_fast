@@ -65,14 +65,13 @@ end
 
 @inline function get_accel(t::Tree, pix::Int64, alpha2::Float64, eps2::Float64)
     stack_ix = 1
-    const tid = threadid()
-    t.stack[stack_ix, tid] = 1
+    t.stack[stack_ix] = 1
     ax = 0.0
     ay = 0.0
     az = 0.0
     p = t.particles[pix]
     @inbounds while stack_ix > 0
-        nix = t.stack[stack_ix, tid]
+        nix = t.stack[stack_ix]
         stack_ix -= 1
         n = t.nodes[nix]
         dx = n.x - p.x
@@ -83,11 +82,11 @@ end
             # open criterion failed, we should try to open this node
             if n.cix1 > 0
                 stack_ix += 1
-                t.stack[stack_ix, tid] = n.cix1
+                t.stack[stack_ix] = n.cix1
             end
             if n.cix2 > 0
                 stack_ix += 1
-                t.stack[stack_ix, tid] = n.cix2
+                t.stack[stack_ix] = n.cix2
             end
             if n.cix1 < 0 && n.cix2 < 0
                 # try direct summation
@@ -116,15 +115,14 @@ end
 
 @inline function get_accel_rel(t::Tree, pix::Int64, alpha2::Float64, eps2::Float64, oax,oay,oaz)
     stack_ix = 1
-    const tid = threadid()    
-    t.stack[stack_ix, tid] = 1
+    t.stack[stack_ix] = 1
     ax = 0.0
     ay = 0.0
     az = 0.0
     p = t.particles[pix]
     oa = sqrt(oax*oax+oay*oay+oaz*oaz)
     @inbounds while stack_ix > 0
-        nix = t.stack[stack_ix, tid]
+        nix = t.stack[stack_ix]
         stack_ix -= 1
         n = t.nodes[nix]
         dx = n.x - p.x
@@ -136,11 +134,11 @@ end
             # open criterion failed, we should try to open this node
             if n.cix1 > 0
                 stack_ix += 1
-                t.stack[stack_ix, tid] = n.cix1
+                t.stack[stack_ix] = n.cix1
             end
             if n.cix2 > 0
                 stack_ix += 1
-                t.stack[stack_ix, tid] = n.cix2
+                t.stack[stack_ix] = n.cix2
             end
             if n.cix1 < 0 && n.cix2 < 0
                 # try direct summation

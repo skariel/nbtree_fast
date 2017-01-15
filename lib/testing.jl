@@ -17,16 +17,28 @@ function get_acc(particles, ix, eps2)
     ax,ay,az
 end
 
-function perf(particles, ax, N, eps2)
+function perf(particles, ax, ay, az, N, eps2)
     ixs = randperm(length(t.particles))[1:N]
     rax = zeros(N)
     vax = ax[ixs]
+    ray = zeros(N)
+    vay = ay[ixs]
+    raz = zeros(N)
+    vaz = az[ixs]
     @threads for i in 1:N
         tax,tay,taz = get_acc(particles, ixs[i], eps2)
         rax[i] = tax;
+        ray[i] = tay;
+        raz[i] = taz;
     end
-    ee = abs((vax-rax)./rax*100)
-    sort(ee)[round(Int64, N*0.99)]
+    eex = abs((vax-rax)./rax*100)
+    eey = abs((vay-ray)./ray*100)
+    eez = abs((vaz-raz)./raz*100)
+    ix = round(Int64, N*0.99)
+    pex = sort(eex)[ix]
+    pey = sort(eey)[ix]
+    pez = sort(eez)[ix]
+    @show pex, pey, pez
 end
 
 function test_in_cell_mass(t::Tree)
