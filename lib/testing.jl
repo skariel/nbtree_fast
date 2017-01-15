@@ -34,7 +34,7 @@ function perf(particles, ax, ay, az, N, eps2)
     eex = abs((vax-rax)./rax*100)
     eey = abs((vay-ray)./ray*100)
     eez = abs((vaz-raz)./raz*100)
-    ix = round(Int64, N*0.99)
+    ix = round(Int64, N*0.995)
     pex = sort(eex)[ix]
     pey = sort(eey)[ix]
     pez = sort(eez)[ix]
