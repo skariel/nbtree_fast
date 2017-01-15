@@ -17,6 +17,13 @@ immutable Node
     fix::Int64 # final particle index
     cix1::Int64 # first child index
     cix2::Int64 # second child index
+
+    qxx::Float64
+    qyy::Float64
+    qxy::Float64
+    qxz::Float64
+    qyz::Float64
+    
 end
 
 type Tree
@@ -109,6 +116,7 @@ function group!(t::Tree, S::Int64)
         length(t.particles), # fix
         -1,                  # cix1::Int64 # first child index
         -1,                  # cix2::Int64 # second child index        
+        0,0,0,0,0,
     )
     # stack contains parents to be splitted
     # add root to stack
@@ -147,6 +155,7 @@ function group!(t::Tree, S::Int64)
                 split,             # pnum::Int64 # number of particles
                 -1,                # cix1::Int64 # first child index
                 -1,                # cix2::Int64 # second child index        
+                0,0,0,0,0,        
             )
             if split-pn.iix+1 > S # comparing number of particles
                 # we have enough particles to split this node
@@ -180,6 +189,7 @@ function group!(t::Tree, S::Int64)
                 pn.fix,
                 node_ix, ### <<<--- this is the update!!!
                 pn.cix2, 
+                0,0,0,0,0,                
             )
         end
 
@@ -207,6 +217,7 @@ function group!(t::Tree, S::Int64)
                 pn.fix,                # pnum::Int64 # number of particles
                 -1,                  # cix1::Int64 # first child index
                 -1,                  # cix2::Int64 # second child index        
+                0,0,0,0,0,        
             )
             if pn.fix-split > S # comparing number of particles
                 # we have enough particles to pslit this node
@@ -241,6 +252,7 @@ function group!(t::Tree, S::Int64)
                 pn.fix,
                 pn.cix1,
                 node_ix, ### <<<--- this is the update!!!
+                0,0,0,0,0,        
             )
         end
     end
