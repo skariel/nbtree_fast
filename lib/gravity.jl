@@ -168,7 +168,7 @@ end
 end
 
 function get_all_accel!(t::Tree, alpha2::Float64, eps2::Float64, ax::Vector{Float64}, ay::Vector{Float64}, az::Vector{Float64})
-    @threads for i in 1:length(t.particles)
+    @inbounds for i in 1:length(t.particles)
         tax, tay, taz = get_accel(t, i, alpha2, eps2)
         ax[i] = tax
         ay[i] = tay
