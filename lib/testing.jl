@@ -21,7 +21,7 @@ function perf(particles, ax, N, eps2)
     ixs = randperm(length(t.particles))[1:N]
     rax = zeros(N)
     vax = ax[ixs]
-    @inbounds for i in 1:N
+    @threads for i in 1:N
         tax,tay,taz = get_acc(particles, ixs[i], eps2)
         rax[i] = tax;
     end

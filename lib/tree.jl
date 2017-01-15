@@ -22,13 +22,13 @@ end
 type Tree
     nodes::Vector{Node}
     particles::Vector{Particle}
-    stack::Vector{Int64}
+    stack::Array{Int64,2}
     num_nodes_used::Int64
 end
 
 function Tree(particles)
     nodes = Array{Node}(round(Int64, 4.8*length(particles)))
-    Tree(nodes, particles, Array{Int64}(10000), 0)
+    Tree(nodes, particles, zeros(Int64, (10000, nthreads())), 0)
 end
 
 function getminmax(t::Tree)
@@ -113,11 +113,11 @@ function group!(t::Tree, S::Int64)
     # stack contains parents to be splitted
     # add root to stack
     stack_ix = 1
-    t.stack[stack_ix] = 1
+    t.stack[stack_ix,1] = 1
 
     @inbounds while stack_ix > 0
         # pop node to split
-        pix = t.stack[stack_ix]  # parent index to be splitted
+        pix = t.stack[stack_ix,1]  # parent index to be splitted
         pn = t.nodes[pix]        # parent node to be splitted
         stack_ix -= 1
 
@@ -152,7 +152,7 @@ function group!(t::Tree, S::Int64)
                 # we have enough particles to split this node
                 # push it to the stack!
                 stack_ix += 1
-                t.stack[stack_ix] = node_ix
+                t.stack[stack_ix,1] = node_ix
             else
                 # node has not enough particles to be splitted
                 # tell the particles of their new parent!
@@ -212,7 +212,7 @@ function group!(t::Tree, S::Int64)
                 # we have enough particles to pslit this node
                 # push it to the stack!
                 stack_ix += 1
-                t.stack[stack_ix] = node_ix
+                t.stack[stack_ix,1] = node_ix
             else
                 # node has not enough particles to be splitted
                 # tell the particles of their new parent!
