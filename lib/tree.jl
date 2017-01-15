@@ -17,18 +17,42 @@ immutable Node
     fix::Int64 # final particle index
     cix1::Int64 # first child index
     cix2::Int64 # second child index
+
+    px::Float64
+    pxx::Float64
+    pxxx::Float64
+    pxxy::Float64
+    pxxz::Float64
+    pxy::Float64
+    pxyy::Float64
+    pxyz::Float64
+    pxz::Float64
+    pxzz::Float64
+    py::Float64
+    pyy::Float64
+    pyyy::Float64
+    pyyz::Float64
+    pyz::Float64
+    pyzz::Float64
+    pz::Float64
+    pzz::Float64
+    pzzz::Float64
+    alpha::Float64
+    
 end
 
 type Tree
+    total_mass::Float64
     nodes::Vector{Node}
     particles::Vector{Particle}
-    stack::Vector{Int64}
+    stack1::Vector{Int64}
+    stack2::Vector{Int64}
     num_nodes_used::Int64
 end
 
 function Tree(particles)
     nodes = Array{Node}(round(Int64, 4.8*length(particles)))
-    Tree(nodes, particles, Array{Int64}(10000), 0)
+    Tree(sum(p.m for p in particles), nodes, particles, Array{Int64}(10000), Array{Int64}(10000), 0)
 end
 
 function getminmax(t::Tree)
@@ -55,9 +79,9 @@ function getminmax(t::Tree)
             maxz=p.z
         end
     end
-    dx = (maxx-minx)*0.01
-    dy = (maxy-miny)*0.01
-    dz = (maxz-minz)*0.01
+    dx = (maxx-minx)*0.001
+    dy = (maxy-miny)*0.001
+    dz = (maxz-minz)*0.001
     minx-dx,maxx+dx, miny-dy,maxy+dy, minz-dz,maxz+dz
 end
 
@@ -109,15 +133,19 @@ function group!(t::Tree, S::Int64)
         length(t.particles), # fix
         -1,                  # cix1::Int64 # first child index
         -1,                  # cix2::Int64 # second child index        
+        0.0,0.0,0.0,0.0,0.0,
+        0.0,0.0,0.0,0.0,0.0,
+        0.0,0.0,0.0,0.0,0.0,
+        0.0,0.0,0.0,0.0,0.0,
     )
     # stack contains parents to be splitted
     # add root to stack
     stack_ix = 1
-    t.stack[stack_ix] = 1
+    t.stack1[stack_ix] = 1
 
     @inbounds while stack_ix > 0
         # pop node to split
-        pix = t.stack[stack_ix]  # parent index to be splitted
+        pix = t.stack1[stack_ix]  # parent index to be splitted
         pn = t.nodes[pix]        # parent node to be splitted
         stack_ix -= 1
 
@@ -128,13 +156,12 @@ function group!(t::Tree, S::Int64)
             # lets create it...
             node_ix += 1
             minx,maxx, miny,maxy, minz,maxz = get_minmax_low(pn)
-            l = max(maxx-minx, maxy-miny, maxz-minz)
             t.nodes[node_ix] = Node(
                 0.0,               # x::Float64
                 0.0,               # y::Float64
                 0.0,               # z::Float64
                 0.0,               # m::Float64
-                l,
+                0.0,
                 maxx,
                 minx,
                 maxy,
@@ -147,12 +174,17 @@ function group!(t::Tree, S::Int64)
                 split,             # pnum::Int64 # number of particles
                 -1,                # cix1::Int64 # first child index
                 -1,                # cix2::Int64 # second child index        
+                0.0,0.0,0.0,0.0,0.0,
+                0.0,0.0,0.0,0.0,0.0,
+                0.0,0.0,0.0,0.0,0.0,
+                0.0,0.0,0.0,0.0,0.0,
+                
             )
             if split-pn.iix+1 > S # comparing number of particles
                 # we have enough particles to split this node
                 # push it to the stack!
                 stack_ix += 1
-                t.stack[stack_ix] = node_ix
+                t.stack1[stack_ix] = node_ix
             else
                 # node has not enough particles to be splitted
                 # tell the particles of their new parent!
@@ -180,6 +212,10 @@ function group!(t::Tree, S::Int64)
                 pn.fix,
                 node_ix, ### <<<--- this is the update!!!
                 pn.cix2, 
+                0.0,0.0,0.0,0.0,0.0,
+                0.0,0.0,0.0,0.0,0.0,
+                0.0,0.0,0.0,0.0,0.0,
+                0.0,0.0,0.0,0.0,0.0,                
             )
         end
 
@@ -188,13 +224,12 @@ function group!(t::Tree, S::Int64)
             # lets create it...
             node_ix += 1            
             minx,maxx, miny,maxy, minz,maxz = get_minmax_high(pn)
-            l = max(maxx-minx, maxy-miny, maxz-minz)
             t.nodes[node_ix] = Node(
                 0.0,                 # x::Float64
                 0.0,                 # y::Float64
                 0.0,                 # z::Float64
                 0.0,                 # m::Float64
-                l,
+                0.0,
                 maxx,
                 minx,
                 maxy,
@@ -207,12 +242,17 @@ function group!(t::Tree, S::Int64)
                 pn.fix,                # pnum::Int64 # number of particles
                 -1,                  # cix1::Int64 # first child index
                 -1,                  # cix2::Int64 # second child index        
+                0.0,0.0,0.0,0.0,0.0,
+                0.0,0.0,0.0,0.0,0.0,
+                0.0,0.0,0.0,0.0,0.0,
+                0.0,0.0,0.0,0.0,0.0,
+                
             )
             if pn.fix-split > S # comparing number of particles
                 # we have enough particles to pslit this node
                 # push it to the stack!
                 stack_ix += 1
-                t.stack[stack_ix] = node_ix
+                t.stack1[stack_ix] = node_ix
             else
                 # node has not enough particles to be splitted
                 # tell the particles of their new parent!
@@ -241,6 +281,10 @@ function group!(t::Tree, S::Int64)
                 pn.fix,
                 pn.cix1,
                 node_ix, ### <<<--- this is the update!!!
+                0.0,0.0,0.0,0.0,0.0,
+                0.0,0.0,0.0,0.0,0.0,
+                0.0,0.0,0.0,0.0,0.0,
+                0.0,0.0,0.0,0.0,0.0,                
             )
         end
     end
