@@ -122,6 +122,8 @@ function group!(t::Tree, S::Int64)
         stack_ix -= 1
 
         split = splitdir!(t.particles, pn)
+        cix1 = -1
+        cix2 = -1
 
         if split >= pn.iix
             # we have a left child!
@@ -161,26 +163,7 @@ function group!(t::Tree, S::Int64)
                     t.particles[i] = Particle(p.x,p.y,p.z,p.m,node_ix)
                 end
             end
-            # update parent node that it has a new child
-            t.nodes[pix] = Node(
-                pn.x,
-                pn.y,
-                pn.z,
-                pn.m,
-                pn.l,
-                pn.maxx,
-                pn.minx,
-                pn.maxy,
-                pn.miny,
-                pn.maxz,
-                pn.minz,
-                pn.dir,
-                pn.pix,
-                pn.iix,
-                pn.fix,
-                node_ix, ### <<<--- this is the update!!!
-                pn.cix2, 
-            )
+            cix1 = node_ix
         end
 
         if split < pn.fix
@@ -221,6 +204,9 @@ function group!(t::Tree, S::Int64)
                     t.particles[i] = Particle(p.x,p.y,p.z,p.m,node_ix)
                 end
             end
+            cix2 = node_ix
+        end
+        if cix1>0 || cix2>0
             # update parent node that it has a new child
             pn = t.nodes[pix]
             t.nodes[pix] = Node(
@@ -239,8 +225,8 @@ function group!(t::Tree, S::Int64)
                 pn.pix,
                 pn.iix,
                 pn.fix,
-                pn.cix1,
-                node_ix, ### <<<--- this is the update!!!
+                cix1, ### <<<--- this is the update...
+                cix2, ### <<<--- and this one too!!!
             )
         end
     end
