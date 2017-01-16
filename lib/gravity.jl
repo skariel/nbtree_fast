@@ -132,7 +132,7 @@ function inform!(t::Tree)
     end
 end
 
-function add_expansion_to_n1(n1, n2)
+@inline function add_expansion_to_n1(n1, n2)
     dx = n1.x-n2.x
     dy = n1.y-n2.y
     dz = n1.z-n2.z
@@ -140,7 +140,7 @@ function add_expansion_to_n1(n1, n2)
     dy2 = dy*dy
     dz2 = dz*dz
 
-    new_px = n1.px +
+    new_px = n2.px+n1.px +
         n2.pxx  * dx    +
         n2.pxxx * dx2/2 +
         n2.pxxy * dx*dy +
@@ -150,25 +150,25 @@ function add_expansion_to_n1(n1, n2)
         n2.pxyz * dy*dz + 
         n2.pxz  * dz    +
         n2.pxzz * dz2/2
-    new_pxx = n1.pxx    +
+    new_pxx = n2.pxx+n1.pxx    +
         n2.pxxx * dx    +
         n2.pxxy * dy    +
         n2.pxxz * dz    
-    new_pxxx = n1.pxxx
-    new_pxxy = n1.pxxy
-    new_pxxz = n1.pxxz
-    new_pxy = n1.pxy    +
+    new_pxxx = n2.pxxx+n1.pxxx
+    new_pxxy = n2.pxxy+n1.pxxy
+    new_pxxz = n2.pxxz+n1.pxxz
+    new_pxy = n2.pxy+n1.pxy    +
         n2.pxxy * dx    +
         n2.pxyy * dy    +
         n2.pxyz * dz
-    new_pxyy = n1.pxyy 
-    new_pxyz = n1.pxyz
-    new_pxz = n1.pxz +
+    new_pxyy = n2.pxyy+n1.pxyy 
+    new_pxyz = n2.pxyz+n1.pxyz
+    new_pxz = n2.pxz+n1.pxz +
         n2.pxxz * dx    +
         n2.pxyz * dy    + 
         n2.pxzz * dz
-    new_pxzz = n1.pxzz
-    new_py = n1.py      +
+    new_pxzz = n2.pxzz+n1.pxzz
+    new_py = n2.py+n1.py      +
         n2.pxxy * dx2/2 +
         n2.pxy  * dx    +
         n2.pxyy * dx*dy +
@@ -178,18 +178,18 @@ function add_expansion_to_n1(n1, n2)
         n2.pyyz * dy*dz +
         n2.pyz  * dz    +
         n2.pyzz * dz2/2
-    new_pyy = n1.pyy    +
+    new_pyy = n2.pyy+n1.pyy    +
         n2.pxyy * dx    +
         n2.pyyy * dy    +
         n2.pyyz * dz 
-    new_pyyy = n1.pyyy
-    new_pyyz = n1.pyyz
-    new_pyz = pyz    +
+    new_pyyy = n2.pyyy+n1.pyyy
+    new_pyyz = n2.pyyz+n1.pyyz
+    new_pyz = n2.pyz+n1.pyz    +
         n2.pxyz * dx    +
         n2.pyyz * dy    +
         n2.pyzz * dz
-    new_pyzz = n1.pyzz
-    new_pz = n1.pz      +
+    new_pyzz = n2.pyzz+n1.pyzz
+    new_pz = n2.pz+n1.pz      +
         n2.pxxz * dx2/2 +
         n2.pxyz * dx*dy +
         n2.pxz  * dx    +
@@ -199,12 +199,12 @@ function add_expansion_to_n1(n1, n2)
         n2.pyzz * dy*dz +
         n2.pzz  * dz    +
         n2.pzzz * dz2/2
-    new_pzz = n1.pzz    +
+    new_pzz = n2.pzz+n1.pzz    +
         n2.pxzz * dx    +
         n2.pyzz * dy    +
         n2.pzzz * dz
-    new_pzzz = n1.pzzz
-    Node(
+    new_pzzz = n2.pzzz+n1.pzzz
+    return Node(
         n1.x,
         n1.y,
         n1.z,
@@ -245,7 +245,7 @@ function add_expansion_to_n1(n1, n2)
     )
 end
 
-function get_accel_from_node(n, x,y,z)
+@inline function get_accel_from_node(n, x,y,z)
     dx = x-n.x
     dy = y-n.y
     dz = z-n.z

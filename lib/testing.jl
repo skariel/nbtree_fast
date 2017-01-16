@@ -280,4 +280,71 @@ function test_acc()
 end
 
 
+function test_mov()
+    tot = 0
+    for i in 1:1000000
+        n1 = get_random_node()
+        x=randn(); y=randn(); z=randn();
+        dax1,day1,daz1 = get_accel_from_node(n1, x,y,z)
+        n2 = get_random_node()
+        dax2,day2,daz2 = get_accel_from_node(n2, x,y,z)
+
+        abs(x-n1.x)<1e-1&&continue
+        abs(y-n1.y)<1e-1&&continue
+        abs(z-n1.z)<1e-1&&continue
+        abs(dax1)<1e-3 && continue
+        abs(day1)<1e-3 && continue
+        abs(daz1)<1e-3 && continue
+
+        abs(x-n2.x)<1e-1&&continue
+        abs(y-n2.y)<1e-1&&continue
+        abs(z-n2.z)<1e-1&&continue
+        abs(dax2)<1e-3 && continue
+        abs(day2)<1e-3 && continue
+        abs(daz2)<1e-3 && continue
+
+        tot+=1
+
+        dax= dax1 + dax2
+        day= day1 + day2
+        daz= daz1 + daz2
+         
+        n1 = add_expansion_to_n1(n1, n2)
+        nax, nay, naz = get_accel_from_node(n1, x,y,z)
+
+        dx = abs((nax-dax)/dax)
+        dy = abs((nay-day)/day)
+        dz = abs((naz-daz)/daz)
+        try
+            @assert dx<1.0e-5
+        catch
+            @show dx
+            @show n1.x,n1.y,n1.z
+            @show x,y,z
+            @show dax, nax
+            @show dax1, dax2
+            break
+        end
+        try
+            @assert dy<1.0e-5
+        catch
+            @show dy
+            @show n1.x,n1.y,n1.z
+            @show x,y,z
+            @show day, nay
+            break
+        end
+        try
+            @assert dz<1.0e-5
+        catch
+            @show dz
+            @show n1.x,n1.y,n1.z
+            @show x,y,z
+            @show daz, naz
+            break
+        end
+    end
+    tot
+end
+
 
