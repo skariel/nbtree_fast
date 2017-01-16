@@ -46,9 +46,9 @@ function test_in_cell_mass(t::Tree)
     end
     nn = zeros(Int64, length(t.particles))
     six = 1
-    t.stack[1] = 1
+    t.stack1[1] = 1
     while six > 0
-        n = t.nodes[t.stack[six]]
+        n = t.nodes[t.stack1[six]]
         six -= 1
         if n.cix1<0 && n.cix2<0
             for j in n.iix:n.fix
@@ -58,11 +58,11 @@ function test_in_cell_mass(t::Tree)
         end
         if n.cix1 > 0
             six += 1
-            t.stack[six] = n.cix1
+            t.stack1[six] = n.cix1
         end
         if n.cix2 > 0
             six += 1
-            t.stack[six] = n.cix2
+            t.stack1[six] = n.cix2
         end
     end
     for x in nn
@@ -71,13 +71,24 @@ function test_in_cell_mass(t::Tree)
 
     for nix in 1:t.num_nodes_used
         n = t.nodes[nix]
-        @assert n.l == max(n.maxx-n.minx, n.maxy-n.miny, n.maxz-n.minz)
         m = 0.0
         for pix in n.iix:n.fix
             p = t.particles[pix]
             @assert p.x <= n.maxx && p.x >= n.minx
             @assert p.y <= n.maxy && p.y >= n.miny
             @assert p.z <= n.maxz && p.z >= n.minz
+            dx = p.x-n.x
+            dy = p.y-n.y
+            dz = p.z-n.z
+            dr2 = dx*dx+dy*dy+dz*dz
+            try
+                @assert (n.l*n.l - dr2) >= -1.0e-13
+            catch
+                @show n.l*n.l
+                @show dr2
+                @show nix, n.m
+                return
+            end
             m += p.m
         end
         @test_approx_eq n.m m
@@ -130,4 +141,46 @@ function test_in_cell_mass(t::Tree)
             @test_approx_eq n.m m
         end
     end
+end
+
+function get_random_node()
+    Node(
+        randn() # x::Float64
+        randn() # y::Float64
+        randn() # z::Float64
+        1.0 # m::Float64
+        abs(randn()+1.0) # l::Float64 # maximal geometrical dimension
+        rand()+1 # maxx::Float64
+        rand()-1 # minx::Float64
+        rand()+1 # maxy::Float64
+        rand()-1 # miny::Float64
+        rand()+1 # maxz::Float64
+        rand()-1 # minz::Float64
+        0 # dir::Int64 # direction node should be splitted (mod 3, 0==x, 1==y, 2==z)
+        -1 # pix::Int64 # parent index
+        -1 # iix::Int64 # first particle index
+        -1 # fix::Int64 # final particle index
+        -1 # cix1::Int64 # first child index
+        -1 # cix2::Int64 # second child index
+
+        randn() # px::Float64
+        randn() # pxx::Float64
+        randn() # pxxx::Float64
+        randn() # pxxy::Float64
+        randn() # pxxz::Float64
+        randn() # pxy::Float64
+        randn() # pxyy::Float64
+        randn() # pxyz::Float64
+        randn() # pxz::Float64
+        randn() # pxzz::Float64
+        randn() # py::Float64
+        randn() # pyy::Float64
+        randn() # pyyy::Float64
+        randn() # pyyz::Float64
+        randn() # pyz::Float64
+        randn() # pyzz::Float64
+        randn() # pz::Float64
+        randn() # pzz::Float64
+        randn() # pzzz::Float64
+    )
 end

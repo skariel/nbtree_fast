@@ -37,8 +37,6 @@ immutable Node
     pz::Float64
     pzz::Float64
     pzzz::Float64
-    alpha::Float64
-    
 end
 
 type Tree
@@ -47,13 +45,14 @@ type Tree
     particles::Vector{Particle}
     stack1::Vector{Int64}
     stack2::Vector{Int64}
+    stack3::Vector{Int64}
     num_nodes_used::Int64
     S::Int64
 end
 
 function Tree(particles, S)
     nodes = Array{Node}(round(Int64, 4.8*length(particles)))
-    Tree(sum(p.m for p in particles), nodes, particles, Array{Int64}(10000), Array{Int64}(10000), 0, S)
+    Tree(sum(p.m for p in particles), nodes, particles, Array{Int64}(10000), Array{Int64}(10000), Array{Int64}(10000), 0, S)
 end
 
 function getminmax(t::Tree)
@@ -137,7 +136,7 @@ function group!(t::Tree)
         0.0,0.0,0.0,0.0,0.0,
         0.0,0.0,0.0,0.0,0.0,
         0.0,0.0,0.0,0.0,0.0,
-        0.0,0.0,0.0,0.0,0.0,
+        0.0,0.0,0.0,0.0,
     )
     # stack contains parents to be splitted
     # add root to stack
@@ -178,7 +177,7 @@ function group!(t::Tree)
                 0.0,0.0,0.0,0.0,0.0,
                 0.0,0.0,0.0,0.0,0.0,
                 0.0,0.0,0.0,0.0,0.0,
-                0.0,0.0,0.0,0.0,0.0,
+                0.0,0.0,0.0,0.0,
                 
             )
             if split-pn.iix+1 > t.S # comparing number of particles
@@ -216,7 +215,7 @@ function group!(t::Tree)
                 0.0,0.0,0.0,0.0,0.0,
                 0.0,0.0,0.0,0.0,0.0,
                 0.0,0.0,0.0,0.0,0.0,
-                0.0,0.0,0.0,0.0,0.0,                
+                0.0,0.0,0.0,0.0,                
             )
         end
 
@@ -246,7 +245,7 @@ function group!(t::Tree)
                 0.0,0.0,0.0,0.0,0.0,
                 0.0,0.0,0.0,0.0,0.0,
                 0.0,0.0,0.0,0.0,0.0,
-                0.0,0.0,0.0,0.0,0.0,
+                0.0,0.0,0.0,0.0,
                 
             )
             if pn.fix-split > t.S # comparing number of particles
@@ -285,7 +284,7 @@ function group!(t::Tree)
                 0.0,0.0,0.0,0.0,0.0,
                 0.0,0.0,0.0,0.0,0.0,
                 0.0,0.0,0.0,0.0,0.0,
-                0.0,0.0,0.0,0.0,0.0,                
+                0.0,0.0,0.0,0.0,                
             )
         end
     end
