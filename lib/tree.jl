@@ -48,11 +48,12 @@ type Tree
     stack1::Vector{Int64}
     stack2::Vector{Int64}
     num_nodes_used::Int64
+    S::Int64
 end
 
-function Tree(particles)
+function Tree(particles, S)
     nodes = Array{Node}(round(Int64, 4.8*length(particles)))
-    Tree(sum(p.m for p in particles), nodes, particles, Array{Int64}(10000), Array{Int64}(10000), 0)
+    Tree(sum(p.m for p in particles), nodes, particles, Array{Int64}(10000), Array{Int64}(10000), 0, S)
 end
 
 function getminmax(t::Tree)
@@ -109,7 +110,7 @@ function get_minmax_high(n::Node)
     end
 end
 
-function group!(t::Tree, S::Int64)
+function group!(t::Tree)
     minx,maxx, miny,maxy, minz,maxz = getminmax(t)
     l = max(maxx-minx, maxy-miny, maxz-minz)
 
@@ -180,7 +181,7 @@ function group!(t::Tree, S::Int64)
                 0.0,0.0,0.0,0.0,0.0,
                 
             )
-            if split-pn.iix+1 > S # comparing number of particles
+            if split-pn.iix+1 > t.S # comparing number of particles
                 # we have enough particles to split this node
                 # push it to the stack!
                 stack_ix += 1
@@ -248,7 +249,7 @@ function group!(t::Tree, S::Int64)
                 0.0,0.0,0.0,0.0,0.0,
                 
             )
-            if pn.fix-split > S # comparing number of particles
+            if pn.fix-split > t.S # comparing number of particles
                 # we have enough particles to pslit this node
                 # push it to the stack!
                 stack_ix += 1

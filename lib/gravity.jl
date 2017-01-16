@@ -73,33 +73,33 @@ function inform!(t::Tree)
             dy1 = y-n.maxy
             dz1 = z-n.maxz
             l1 = dx1*dx1+dy1*dy1+dz1*dz1            
-            dx2 = x-n.maxx
+            dx2 = x-n.minx
             dy2 = y-n.maxy
             dz2 = z-n.maxz
             l2 = dx2*dx2+dy2*dy2+dz2*dz2
             dx3 = x-n.maxx
-            dy3 = y-n.maxy
+            dy3 = y-n.miny
             dz3 = z-n.maxz
             l3 = dx3*dx3+dy3*dy3+dz3*dz3
-            dx4 = x-n.maxx
-            dy4 = y-n.maxy
+            dx4 = x-n.minx
+            dy4 = y-n.miny
             dz4 = z-n.maxz
             l4 = dx4*dx4+dy4*dy4+dz4*dz4
             dx5 = x-n.maxx
             dy5 = y-n.maxy
-            dz5 = z-n.maxz
+            dz5 = z-n.minz
             l5 = dx5*dx5+dy5*dy5+dz5*dz5
-            dx6 = x-n.maxx
+            dx6 = x-n.minx
             dy6 = y-n.maxy
-            dz6 = z-n.maxz
+            dz6 = z-n.minz
             l6 = dx6*dx6+dy6*dy6+dz6*dz6
             dx7 = x-n.maxx
-            dy7 = y-n.maxy
-            dz7 = z-n.maxz
+            dy7 = y-n.miny
+            dz7 = z-n.minz
             l7 = dx7*dx7+dy7*dy7+dz7*dz7
-            dx8 = x-n.maxx
-            dy8 = y-n.maxy
-            dz8 = z-n.maxz
+            dx8 = x-n.minx
+            dy8 = y-n.miny
+            dz8 = z-n.minz
             l8 = dx8*dx8+dy8*dy8+dz8*dz8
 
             lco = sqrt(max(l1,l2,l3,l4,l5,l6,l7,l8))
@@ -132,18 +132,44 @@ function inform!(t::Tree)
     end
 end
 
-function interact!(t::Tree, alpha2::Float64)
+function interact!(t::Tree, alpha2::Float64, ax,ay,az)
+    fill!(ax,0.0)
+    fill!(ay,0.0)
+    fill!(az,0.0)
     # pushing root into the stack
     six = 1
     t.stack1[six]=1
     t.stack2[six]=1
-    while six > 0
+    @inbounds while six > 0
         ix1 = t.stack1[six]
         ix2 = t.stack2[six]
         six -= 1
         if ix1==ix2
-            # expand self interactions
             n = t.nodes[ix1]
+            if n.cix1<0 && n.cix2<0
+                @inbounds for i1 in n.iix:n.fix
+                    p1 = t.particles[i1]
+                    @inbounds for i2 in i1:n.fix
+                        i1 == i2 && continue
+                        p2 = t.particles[i2]
+                        dx = p2.x - p1.x
+                        dy = p2.y - p1.y
+                        dz = p2.z - p1.z
+                        dr2 = dx*dx + dy*dy + dz*dz
+                        dr3 = dr2*sqrt(dr2)
+                        fac1 = p2.m/dr3
+                        fac2 = p1.m/dr3
+                        ax[i1] += dx*fac1
+                        ay[i1] += dy*fac1
+                        az[i1] += dz*fac1
+                        ax[i2] -= dx*fac2
+                        ay[i2] -= dy*fac2
+                        az[i2] -= dz*fac2
+                    end            
+                end                
+                continue
+            end
+            # expand self interactions
             if n.cix1>0 && n.cix2>0
                 six += 1
                 t.stack1[six] = n.cix1
@@ -167,27 +193,57 @@ function interact!(t::Tree, alpha2::Float64)
                 t.stack2[six] = n.cix2
                 continue
             end
-            continue
+            error("cant reach here!!!!")
         end
 
         n1 = t.nodes[ix1]
         n2 = t.nodes[ix2]
         
-        # check for direct summation, including leafs!
-        if n1.cix1<0 && n1.cix2<0 && n2.cix1<0 && n2.cix2<0
-            
+        np1 = n1.fix-n1.iix+1
+        np2 = n2.fix-n2.iix+1
+
+        # check for direct summation when small particle count
+        if np1*np2 <= 4
+            @inbounds for i1 in n1.iix:n1.fix
+                p1 = t.particles[i1]
+                @inbounds for i2 in n2.iix:n2.fix
+                    i1 == i2 && continue
+                    p2 = t.particles[i2]
+                    dx = p2.x - p1.x
+                    dy = p2.y - p1.y
+                    dz = p2.z - p1.z
+                    dr2 = dx*dx + dy*dy + dz*dz
+                    dr3 = dr2*sqrt(dr2)
+                    fac1 = p2.m/dr3
+                    fac2 = p1.m/dr3
+                    ax[i1] += dx*fac1
+                    ay[i1] += dy*fac1
+                    az[i1] += dz*fac1
+                    ax[i2] -= dx*fac2
+                    ay[i2] -= dy*fac2
+                    az[i2] -= dz*fac2
+                end            
+            end
+            continue
         end
+
+        # doing a MAC test
 
         dx = n2.x-n1.x
         dy = n2.y-n1.y
         dz = n2.z-n1.z
         dr2 = dx*dx+dy*dy+dz*dz
-        if n.l*n.l/dr2 > alpha2*n.alpha*n.alpha
+        dr = sqrt(dr2)
+        if (n1.l + n2.l)/dr > alpha2*n.alpha
             # failed MAC, opening node
 
-            if (n1.l>n2.l && (n1.cix1>0 || n1.cix2>0)) ||
-                (n2.cix1<0 && n2.cix2<0)
-                # opnening n1
+            if n1.l < n2.l
+                n1, n2 = n2,n1
+                ix1, ix2 = ix2, ix1
+            end
+
+            # opnening n1
+            if n1.cix1>0 || n1.cix2>0
                 if n1.cix1>0
                     six += 1
                     t.stack1[six] = n1.cix1
@@ -199,25 +255,91 @@ function interact!(t::Tree, alpha2::Float64)
                     t.stack2[six] = ix2
                 end
                 continue
-            else
-                # opening n2
-                if n2.cix1>0
-                    six += 1
-                    t.stack1[six] = n2.cix1
-                    t.stack2[six] = ix1
-                end
-                if n2.cix2>0
-                    six += 1
-                    t.stack1[six] = n2.cix2
-                    t.stack2[six] = ix1
-                end
-                continue
             end
+
+            # c-p interaction
+            @inbounds for i1 in n1.iix:n1.fix
+                p1 = t.particles[i1]
+                # interact with n2!
+
+                dx = n1.x-p1.x
+                dy = n1.y-p1.y
+                dz = n1.z-p1.z
+                dr2 = dx*dx+dy*dy+dz*dz
+                dr = sqrt(dr2)
+                dr3 = dr2*dr
+
+                fac = n.m/dr3
+                ax[i1] += dx/fac
+                ay[i1] += dy/fac
+                az[i1] += dz/fac
+
+                dr5 = dr3*dr2
+                dr7 = dr3*dr5
+                dx2 = dx*dx
+                dy2 = dy*dy
+                dz2 = dz*dz
+                dx3 = dx2*dx
+                dy3 = dy2*dy
+                dz3 = dz2*dz
+
+                px  = -dx/dr3
+                py  = -dy/dr3
+                pz  = -dz/dr3
+
+                pxx = (3*dx2-dr2)/dr5
+                pyy = (3*dy2-dr2)/dr5
+                pzz = (3*dz2-dr2)/dr5
+
+                pxxx = (-6*dx3 + 9*dx*(dr2-dx2))/dr7
+                pyyy = (-6*dy3 + 9*dy*(dr2-dy2))/dr7
+                pzzz = (-6*dz3 + 9*dz*(dr2-dz2))/dr7
+
+                pxxy = 3*dy*(dr2-5*dx2)/dr7
+                pxxz = 3*dz*(dr2-5*dx2)/dr7
+                pxzz = 3*dx*(dr2-5*dz2)/dr7
+                pyyz = 3*dz*(dr2-5*dy2)/dr7
+                pyzz = 3*dy*(dr2-5*dz2)/dr7
+                pxyy = 3*dx*(dr2-5*dy2)/dr7
+
+                pxyz = 3*dy*(dr2-5*dx2)/dr7
+
+                pxy = (3*dx*dy)/dr5
+                pxz = (3*dx*dz)/dr5
+                pyz = (3*dz*dy)/dr5
+                
+                
+            end
+            continue
         end
 
         # nodes are well separated...
 
-        dr = sqrt(dr2)
+        # check for direct summation when small particle count
+        if np1*np2 <= 16
+            @inbounds for i1 in n1.iix:n1.fix
+                p1 = t.particles[i1]
+                @inbounds for i2 in n2.iix:n2.fix
+                    i1 == i2 && continue
+                    p2 = t.particles[i2]
+                    dx = p2.x - p1.x
+                    dy = p2.y - p1.y
+                    dz = p2.z - p1.z
+                    dr2 = dx*dx + dy*dy + dz*dz
+                    dr3 = dr2*sqrt(dr2)
+                    fac1 = p2.m/dr3
+                    fac2 = p1.m/dr3
+                    ax[i1] += dx*fac1
+                    ay[i1] += dy*fac1
+                    az[i1] += dz*fac1
+                    ax[i2] -= dx*fac2
+                    ay[i2] -= dy*fac2
+                    az[i2] -= dz*fac2
+                end            
+            end
+            continue
+        end
+
         dr3 = dr2*dr
         dr5 = dr3*dr2
         dr7 = dr3*dr5
@@ -384,58 +506,6 @@ end
     ax, ay, az
 end
 
-@inline function get_accel_rel(t::Tree, pix::Int64, alpha2::Float64, eps2::Float64, oax,oay,oaz)
-    stack_ix = 1
-    t.stack1[stack_ix] = 1
-    ax = 0.0
-    ay = 0.0
-    az = 0.0
-    p = t.particles[pix]
-    oa = sqrt(oax*oax+oay*oay+oaz*oaz)
-    @inbounds while stack_ix > 0
-        nix = t.stack1[stack_ix]
-        stack_ix -= 1
-        n = t.nodes[nix]
-        dx = n.x - p.x
-        dy = n.y - p.y
-        dz = n.z - p.z
-        dr2 = dx*dx + dy*dy + dz*dz + eps2
-        na = n.m/dr2
-        if na*n.l*n.l/dr2 > oa*alpha2
-            # open criterion failed, we should try to open this node
-            if n.cix1 > 0
-                stack_ix += 1
-                t.stack1[stack_ix] = n.cix1
-            end
-            if n.cix2 > 0
-                stack_ix += 1
-                t.stack1[stack_ix] = n.cix2
-            end
-            if n.cix1 < 0 && n.cix2 < 0
-                # try direct summation
-                for j in n.iix:n.fix
-                    p2 = t.particles[j]
-                    dx = p2.x - p.x
-                    dy = p2.y - p.y
-                    dz = p2.z - p.z
-                    dr2 = dx*dx + dy*dy + dz*dz + eps2
-                    fac = p2.m/dr2/sqrt(dr2)
-                    ax += dx*fac
-                    ay += dy*fac
-                    az += dz*fac                    
-                end
-            end
-            continue
-        end
-        # open criterion succeeded
-        fac = n.m/dr2/sqrt(dr2)
-        ax += dx*fac
-        ay += dy*fac
-        az += dz*fac
-    end
-    ax, ay, az
-end
-
 function get_all_accel!(t::Tree, alpha2::Float64, eps2::Float64, ax::Vector{Float64}, ay::Vector{Float64}, az::Vector{Float64})
     @inbounds for i in 1:length(t.particles)
         tax, tay, taz = get_accel(t, i, alpha2, eps2)
@@ -446,12 +516,3 @@ function get_all_accel!(t::Tree, alpha2::Float64, eps2::Float64, ax::Vector{Floa
     nothing
 end    
 
-function get_all_accel_rel!(t::Tree, alpha2::Float64, eps2::Float64, ax::Vector{Float64}, ay::Vector{Float64}, az::Vector{Float64})
-    @inbounds for i in 1:length(t.particles)
-        tax, tay, taz = get_accel_rel(t, i, alpha2, eps2, ax[i],ay[i],az[i])
-        ax[i] = tax
-        ay[i] = tay
-        az[i] = taz
-    end
-    nothing
-end    
