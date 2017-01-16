@@ -279,7 +279,7 @@ function get_accel_from_node(n, x,y,z)
     az = n.pz +
         n.pxxz*dx2/2 +
         n.pxyz*dx*dy +
-        n.pxz*dz +
+        n.pxz*dx +
         n.pxzz*dx*dz +
         n.pyyz*dy2/2 +
         n.pyz*dy +

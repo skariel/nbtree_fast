@@ -145,42 +145,139 @@ end
 
 function get_random_node()
     Node(
-        randn() # x::Float64
-        randn() # y::Float64
-        randn() # z::Float64
-        1.0 # m::Float64
-        abs(randn()+1.0) # l::Float64 # maximal geometrical dimension
-        rand()+1 # maxx::Float64
-        rand()-1 # minx::Float64
-        rand()+1 # maxy::Float64
-        rand()-1 # miny::Float64
-        rand()+1 # maxz::Float64
-        rand()-1 # minz::Float64
-        0 # dir::Int64 # direction node should be splitted (mod 3, 0==x, 1==y, 2==z)
-        -1 # pix::Int64 # parent index
-        -1 # iix::Int64 # first particle index
-        -1 # fix::Int64 # final particle index
-        -1 # cix1::Int64 # first child index
-        -1 # cix2::Int64 # second child index
+        randn(), # x::Float64
+        randn(), # y::Float64
+        randn(), # z::Float64
+        1.0, # m::Float64
+        abs(randn()+1.0), # l::Float64 # maximal geometrical dimension
+        rand()+1, # maxx::Float64
+        rand()-1, # minx::Float64
+        rand()+1, # maxy::Float64
+        rand()-1, # miny::Float64
+        rand()+1, # maxz::Float64
+        rand()-1, # minz::Float64
+        0 ,  # dir::Int64 # direction node should be splitted (mod 3, 0==x, 1==y, 2==z)
+        -1,  # pix::Int64 # parent index
+        -1,  # iix::Int64 # first particle index
+        -1,  # fix::Int64 # final particle index
+        -1,  # cix1::Int64 # first child index
+        -1,  # cix2::Int64 # second child index
 
-        randn() # px::Float64
-        randn() # pxx::Float64
-        randn() # pxxx::Float64
-        randn() # pxxy::Float64
-        randn() # pxxz::Float64
-        randn() # pxy::Float64
-        randn() # pxyy::Float64
-        randn() # pxyz::Float64
-        randn() # pxz::Float64
-        randn() # pxzz::Float64
-        randn() # py::Float64
-        randn() # pyy::Float64
-        randn() # pyyy::Float64
-        randn() # pyyz::Float64
-        randn() # pyz::Float64
-        randn() # pyzz::Float64
-        randn() # pz::Float64
-        randn() # pzz::Float64
-        randn() # pzzz::Float64
+        randn(), # px::Float64
+        randn(), # pxx::Float64
+        randn(), # pxxx::Float64
+        randn(), # pxxy::Float64
+        randn(), # pxxz::Float64
+        randn(), # pxy::Float64
+        randn(), # pxyy::Float64
+        randn(), # pxyz::Float64
+        randn(), # pxz::Float64
+        randn(), # pxzz::Float64
+        randn(), # py::Float64
+        randn(), # pyy::Float64
+        randn(), # pyyy::Float64
+        randn(), # pyyz::Float64
+        randn(), # pyz::Float64
+        randn(), # pyzz::Float64
+        randn(), # pz::Float64
+        randn(), # pzz::Float64
+        randn(), # pzzz::Float64
     )
 end
+
+function calc_pot(n, x,y,z)
+    dx = x-n.x
+    dy = y-n.y
+    dz = z-n.z
+    dx2 = dx*dx
+    dy2 = dy*dy
+    dz2 = dz*dz
+
+    return n.px*dx + 
+        n.pxx*dx2/2 +
+        n.pxxx*dx2*dx/6 +
+        n.pxxy*dx2/2*dy +
+        n.pxxz*dx2/2*dz +
+        n.pxy*dx*dy +
+        n.pxyy*dx*dy2/2 +
+        n.pxyz*dx*dy*dz +
+        n.pxz*dx*dz +
+        n.pxzz*dx*dz2/2 +
+        n.py*dy +
+        n.pyy*dy2/2 +
+        n.pyyy*dy2*dy/6 +
+        n.pyyz*dy2/2*dz +
+        n.pyz*dy*dz +
+        n.pyzz*dy*dz2/2 +
+        n.pz*dz +
+        n.pzz*dz2/2 +
+        n.pzzz*dz2*dz/6    
+end
+
+function get_numerical_ax(n, x,y,z)
+    dx = 1.0e-8*(x-n.x)
+    (calc_pot(n,x+dx,y,z) - calc_pot(n,x,y,z))/dx
+end
+
+function get_numerical_ay(n, x,y,z)
+    dy = 1.0e-8*(y-n.y)
+    (calc_pot(n,x,y+dy,z) - calc_pot(n,x,y,z))/dy
+end
+
+function get_numerical_az(n, x,y,z)
+    dz = 1.0e-8*(z-n.z)
+    (calc_pot(n,x,y,z+dz) - calc_pot(n,x,y,z))/dz
+end
+
+function test_acc()
+    tot = 0
+    for i in 1:1000000
+        n = get_random_node()
+        x=randn(); y=randn(); z=randn();
+        dax,day,daz = get_accel_from_node(n, x,y,z)
+        abs(x-n.x)<1e-1&&continue
+        abs(y-n.y)<1e-1&&continue
+        abs(z-n.z)<1e-1&&continue
+        abs(dax)<1e-3 && continue
+        abs(day)<1e-3 && continue
+        abs(daz)<1e-3 && continue
+        tot+=1
+        nax = get_numerical_ax(n, x,y,z)
+        nay = get_numerical_ay(n, x,y,z)
+        naz = get_numerical_az(n, x,y,z)
+        dx = abs((nax-dax)/dax)
+        dy = abs((nay-day)/day)
+        dz = abs((naz-daz)/daz)
+        try
+            @assert dx<1.0e-2
+        catch
+            @show dx
+            @show n.x,n.y,n.z
+            @show x,y,z
+            @show dax, nax
+            break
+        end
+        try
+            @assert dy<1.0e-2
+        catch
+            @show dy
+            @show n.x,n.y,n.z
+            @show x,y,z
+            @show day, nay
+            break
+        end
+        try
+            @assert dz<1.0e-2
+        catch
+            @show dz
+            @show n.x,n.y,n.z
+            @show x,y,z
+            @show daz, naz
+            break
+        end
+    end
+    tot
+end
+
+
+
