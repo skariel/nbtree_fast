@@ -38,6 +38,29 @@ immutable Node
     pzz::Float64
     pzzz::Float64
 end
+Node() = Node(
+        0.0,                 # x::Float64
+        0.0,                 # y::Float64
+        0.0,                 # z::Float64
+        0.0,                 # m::Float64
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0,                   # direction
+        -1,                  # pix::Int64 # parent index
+        -1,                  # iix::Int64 # first particle index
+        -1,                  # fix
+        -1,                  # cix1::Int64 # first child index
+        -1,                  # cix2::Int64 # second child index        
+        0.0,0.0,0.0,0.0,0.0,
+        0.0,0.0,0.0,0.0,0.0,
+        0.0,0.0,0.0,0.0,0.0,
+        0.0,0.0,0.0,0.0,
+    )
 
 type Tree
     total_mass::Float64
@@ -51,8 +74,9 @@ type Tree
 end
 
 function Tree(particles, S)
-    nodes = Array{Node}(round(Int64, 4.8*length(particles)))
-    Tree(sum(p.m for p in particles), nodes, particles, Array{Int64}(10000), Array{Int64}(10000), Array{Int64}(10000), 0, S)
+    nodec = round(Int64, 3.0*length(particles))
+    nodes = Node[Node() for i in 1:nodec]
+    Tree(sum(p.m for p in particles), nodes, particles, zeros(Int64,10000), zeros(Int64,10000), zeros(Int64,10000), 0, S)
 end
 
 function getminmax(t::Tree)

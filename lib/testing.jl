@@ -26,7 +26,7 @@ function perf(particles, ax, N, eps2)
         rax[i] = tax;
     end
     ee = abs((vax-rax)./rax*100)
-    sort(ee)[round(Int64, N*0.99)]
+    sort(ee)[round(Int64, N*0.5)]
 end
 
 function test_in_cell_mass(t::Tree)
@@ -348,3 +348,111 @@ function test_mov()
 end
 
 
+function test_exp()
+    n1 = Node(
+        -2.0, 2.0, 1.0, 1.0, 1.0,
+        1.0, -1.0, 1.0, -1.0, 1.0, -1.0,
+        0, -1, -1, -1, -1, -1, 
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    )   
+
+    p = Particle(5.0,0.0,0.0,1.0,-1)
+
+    # make them interact...
+    x=p.x
+    y=p.y
+    z=p.z
+    m=p.m
+
+    dx = x-n1.x
+    dy = y-n1.y
+    dz = z-n1.z
+    dx2 = dx*dx
+    dy2 = dy*dy
+    dz2 = dz*dz
+    dr2 = dx2 + dy2 + dz2
+    dr = sqrt(dr2)
+    M = n1.m+m
+
+    fac = 1.0
+    alpha = 0.5
+    l = 0.0
+    @assert (n1.l + l)/dr < alpha/fac # MAC test
+
+    # MAC succesful, execute interaction
+    dr3 = dr2*dr
+    dr5 = dr3*dr2
+    dr7 = dr2*dr5
+    dx3 = dx2*dx
+    dy3 = dy2*dy
+    dz3 = dz2*dz
+
+    @show dx
+    @show dx3
+    px = dx/dr3
+    py = dy/dr3
+    pz = dz/dr3
+
+    pxx = (3*dx2-dr2)/dr5
+    pyy = (3*dy2-dr2)/dr5
+    pzz = (3*dz2-dr2)/dr5
+
+    pxy = 3*dx*dy/dr5
+    pxz = 3*dx*dz/dr5
+    pyz = 3*dy*dz/dr5
+
+    pxxx = 3*dx*(5*dx2-3*dr2)/dr7
+    pyyy = 3*dy*(5*dy2-3*dr2)/dr7
+    pzzz = 3*dz*(5*dz2-3*dr2)/dr7
+
+    pxxy = -3*dy*(dr2-5*dx2)/dr7
+    pxxz = -3*dz*(dr2-5*dx2)/dr7
+    pyyz = -3*dz*(dr2-5*dy2)/dr7
+    pyzz = -3*dy*(dr2-5*dz2)/dr7
+    pxyy = -3*dx*(dr2-5*dy2)/dr7
+    pxzz = -3*dx*(dr2-5*dz2)/dr7
+
+    pxyz = 15*dx*dy*dz/dr7
+
+    n1 = Node(
+        -2.0, 2.0, 1.0, n1.m, n1.l,
+        1.0, -1.0, 1.0, -1.0, 1.0, -1.0,
+        n1.dir, n1.pix, n1.iix, n1.fix, n1.cix1, n1.cix2,
+        m*px,
+        m*pxx,
+        m*pxxx,
+        m*pxxy,
+        m*pxxz,
+        m*pxy,
+        m*pxyy,
+        m*pxyz,
+        m*pxz,
+        m*pxzz,
+        m*py,
+        m*pyy,
+        m*pyyy,
+        m*pyyz,
+        m*pyz,
+        m*pyzz,
+        m*pz,
+        m*pzz,
+        m*pzzz,
+    )   
+    tx = n1.minx
+    ty = n1.miny
+    tz = n1.maxz
+    @show get_accel_from_node(n1, n1.x,n1.y,n1.z)[1] 
+    @show get_accel_from_node(n1, tx,ty,tz)[1]
+
+    dx = x-tx
+    dy = y-ty
+    dz = z-tz
+    dr2 = dx*dx+dy*dy+dz*dz
+    @show dx*m/dr2/sqrt(dr2)
+
+    @show px
+    @show pxx
+    @show pxxx
+
+    @show pxy
+end

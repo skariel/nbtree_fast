@@ -1,4 +1,8 @@
 function inform!(t::Tree)
+    p = t.particles[1]
+    n = t.nodes[1]
+    n1=n
+    n2=n
     @inbounds for i in t.num_nodes_used:-1:1
         x = 0.0
         y = 0.0
@@ -304,7 +308,8 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
     t.stack3[six]=I_CS # root is a self interaction
     n = t.nodes[1]
     n1 = n
-    n2 = n
+    p1 = Particle(0.0,0.0,0.0,0.0,-1)
+    p2 = p1
 
     @inbounds while six > 0
         ix1 = t.stack1[six]
@@ -364,7 +369,7 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
         n1 = t.nodes[ix1]
         nbody1 = n1.fix-n1.iix+1
         if itype==I_CB && nbody1<16
-            # just do self interactions
+            # just do direct summation
             p2 = t.particles[ix2]
             @inbounds for i1 in n1.iix:n1.fix
                 p1 = t.particles[i1]
@@ -388,11 +393,11 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
         # Do a MAC test
         x=0.0; y=0.0; z=0.0; m=0.0; l=0.0;
         if itype==I_CB
-            p = t.particles[ix2]
-            x=p.x
-            y=p.y
-            z=p.z
-            m=p.m
+            p2 = t.particles[ix2]
+            x=p2.x
+            y=p2.y
+            z=p2.z
+            m=p2.m
         else
             n = t.nodes[ix2]
             x=n.x
@@ -415,7 +420,8 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
             # MAC succesful, execute interaction
             dr3 = dr2*dr
             dr5 = dr3*dr2
-            dr7 = dr3*dr5
+            dr7 = dr2*dr5
+            dr73 = dr7/3
             dx3 = dx2*dx
             dy3 = dy2*dy
             dz3 = dz2*dz
@@ -424,40 +430,38 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
             py = dy/dr3
             pz = dz/dr3
 
-            pxx = (dr2-3*dx2)/dr5
-            pyy = (dr2-3*dy2)/dr5
-            pzz = (dr2-3*dz2)/dr5
+            pxx = (3*dx2-dr2)/dr5
+            pyy = (3*dy2-dr2)/dr5
+            pzz = (3*dz2-dr2)/dr5
 
-            pxxx = (3*dx*(5*dx2-3*dr2))/dr7
-            pyyy = (3*dy*(5*dy2-3*dr2))/dr7
-            pzzz = (3*dz*(5*dz2-3*dr2))/dr7
+            pxy = 3*dx*dy/dr5
+            pxz = 3*dx*dz/dr5
+            pyz = 3*dy*dz/dr5
 
-            pxxy = (-3*dy*(dr2-5*dx2))/dr7
-            pxxz = (-3*dz*(dr2-5*dx2))/dr7
-            pyyz = (-3*dz*(dr2-5*dy2))/dr7
-            pyzz = (-3*dy*(dr2-5*dz2))/dr7
+            pxxx = dx*(5*dx2-3*dr2)/dr73
+            pyyy = dy*(5*dy2-3*dr2)/dr73
+            pzzz = dz*(5*dz2-3*dr2)/dr73
 
-            pxy = (-3*dx*dy)/dr5
-            pxz = (-3*dx*dz)/dr5
-            pyz = (-3*dy*dz)/dr5
+            pxxy = dy*(5*dx2-dr2)/dr73
+            pxxz = dz*(5*dx2-dr2)/dr73
+            pyyz = dz*(5*dy2-dr2)/dr73
+            pyzz = dy*(5*dz2-dr2)/dr73
+            pxyy = dx*(5*dy2-dr2)/dr73
+            pxzz = dx*(5*dz2-dr2)/dr73
 
-            pxyy = (-3*dx*(dr2-5*dy2))/dr7
-            pxzz = (-3*dx*(dr2-5*dz2))/dr7
-
-            pxyz = (15*dx*dy*dz)/dr7
+            pxyz = 15*dx*dy*dz/dr7
 
             if itype==I_CB
-                fac = -n.m/dr3
-                ax[ix2] += dx/fac
-                ay[ix2] += dy/fac
-                az[ix2] += dz/fac                
+                fac = -n1.m/dr3
+                ax[ix2] += dx*fac
+                ay[ix2] += dy*fac
+                az[ix2] += dz*fac                
             else
-                n2 = t.nodes[ix2]
                 t.nodes[ix2] = Node(
-                    n2.x, n2.y, n2.z, n2.m, n2.l,
-                    n2.maxx, n2.minx, n2.maxy, n2.miny, n2.maxz, n2.minz,
-                    n2.dir, n2.pix, n2.iix, n2.fix,
-                    n2.cix1, n2.cix2,
+                    n.x, n.y, n.z, n.m, n.l,
+                    n.maxx, n.minx, n.maxy, n.miny, n.maxz, n.minz,
+                    n.dir, n.pix, n.iix, n.fix,
+                    n.cix1, n.cix2,
                     -n1.m*px,
                      n1.m*pxx,
                     -n1.m*pxxx,
@@ -509,13 +513,12 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
         # failed MAC
 
         if itype==I_CC
-            n2 = t.nodes[ix2]
-            nbody2 = n2.fix-n2.iix+1
+            nbody2 = n.fix-n.iix+1
             # postconditions to direct summation
             if nbody1*nbody2 < 64
                 @inbounds for i1 in n1.iix:n1.fix
                     p1 = t.particles[i1]
-                    @inbounds for i2 in n2.iix:n2.fix
+                    @inbounds for i2 in n.iix:n.fix
                         p2 = t.particles[i2]
                         dx = p2.x - p1.x
                         dy = p2.y - p1.y
@@ -535,8 +538,8 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
                 continue
             end
             # the interaction cannot be executed, splitting the bigger node
-            if n2.l > n1.l
-                n1 = n2
+            if n.l > n1.l
+                n1 = n
                 ix1,ix2 = ix2,ix1
             end
             if n1.cix1>0
@@ -604,7 +607,31 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
     end
 end
 
-
+function collect!(t::Tree, ax::Vector{Float64},ay::Vector{Float64},az::Vector{Float64})
+    n = t.nodes[1]
+    n_ = n
+    @inbounds for i in 1:t.num_nodes_used
+        n = t.nodes[i]
+        if n.cix1 > 0
+            _n = t.nodes[n.cix1]
+            t.nodes[n.cix1] = add_expansion_to_n1(_n,n)
+        end
+        if n.cix2 > 0            
+            _n = t.nodes[n.cix2]
+            t.nodes[n.cix2] = add_expansion_to_n1(_n,n)
+        end
+        if n.cix1<0 && n.cix2<0
+            # leaf node, apply force
+            for pix in n.iix:n.fix
+                p = t.particles[pix]
+                dax,day,daz = get_accel_from_node(n, p.x,p.y,p.z)
+                ax[pix] += dax
+                ay[pix] += day
+                az[pix] += daz
+            end
+        end
+    end
+end
 
 
 
