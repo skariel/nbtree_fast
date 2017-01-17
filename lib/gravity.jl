@@ -264,7 +264,6 @@ end
         n.pxz*dz +
         n.pxzz*dz2/2
 
-
     ay = n.py +
         n.pxxy*dx2/2 +
         n.pxy*dx +
@@ -303,6 +302,9 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
     t.stack1[six]=1
     t.stack2[six]=1
     t.stack3[six]=I_CS # root is a self interaction
+    n = t.nodes[1]
+    n1 = n
+    n2 = n
 
     @inbounds while six > 0
         ix1 = t.stack1[six]
@@ -316,10 +318,9 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
             if (pnum <= 32) || (n.cix1<0 && n.cix2<0)
                 # its either a leaf or a small particle count
                 # perform direct summation
-                for i1 in n.iix:n.fix
+                for i1 in n.iix:(n.fix-1)
                     p1 = t.particles[i1]
-                    for i2 in i1:n.fix
-                        i1 == i2 && continue
+                    for i2 in (i1+1):n.fix
                         p2 = t.particles[i2]
                         dx = p2.x - p1.x
                         dy = p2.y - p1.y
@@ -362,7 +363,7 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
 
         n1 = t.nodes[ix1]
         nbody1 = n1.fix-n1.iix+1
-        if itype==I_CB && nbody1<512
+        if itype==I_CB && nbody1<16
             # just do self interactions
             p2 = t.particles[ix2]
             @inbounds for i1 in n1.iix:n1.fix
@@ -419,30 +420,31 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
             dy3 = dy2*dy
             dz3 = dz2*dz
 
-            px  = -dx/dr3
-            py  = -dy/dr3
-            pz  = -dz/dr3
+            px = dx/dr3
+            py = dy/dr3
+            pz = dz/dr3
 
-            pxx = (3*dx2-dr2)/dr5
-            pyy = (3*dy2-dr2)/dr5
-            pzz = (3*dz2-dr2)/dr5
+            pxx = (dr2-3*dx2)/dr5
+            pyy = (dr2-3*dy2)/dr5
+            pzz = (dr2-3*dz2)/dr5
 
-            pxxx = (-6*dx3 + 9*dx*(dr2-dx2))/dr7
-            pyyy = (-6*dy3 + 9*dy*(dr2-dy2))/dr7
-            pzzz = (-6*dz3 + 9*dz*(dr2-dz2))/dr7
+            pxxx = (3*dx*(5*dx2-3*dr2))/dr7
+            pyyy = (3*dy*(5*dy2-3*dr2))/dr7
+            pzzz = (3*dz*(5*dz2-3*dr2))/dr7
 
-            pxxy = 3*dy*(dr2-5*dx2)/dr7
-            pxxz = 3*dz*(dr2-5*dx2)/dr7
-            pxzz = 3*dx*(dr2-5*dz2)/dr7
-            pyyz = 3*dz*(dr2-5*dy2)/dr7
-            pyzz = 3*dy*(dr2-5*dz2)/dr7
-            pxyy = 3*dx*(dr2-5*dy2)/dr7
+            pxxy = (-3*dy*(dr2-5*dx2))/dr7
+            pxxz = (-3*dz*(dr2-5*dx2))/dr7
+            pyyz = (-3*dz*(dr2-5*dy2))/dr7
+            pyzz = (-3*dy*(dr2-5*dz2))/dr7
 
-            pxyz = 3*dy*(dr2-5*dx2)/dr7
+            pxy = (-3*dx*dy)/dr5
+            pxz = (-3*dx*dz)/dr5
+            pyz = (-3*dy*dz)/dr5
 
-            pxy = (3*dx*dy)/dr5
-            pxz = (3*dx*dz)/dr5
-            pyz = (3*dz*dy)/dr5
+            pxyy = (-3*dx*(dr2-5*dy2))/dr7
+            pxzz = (-3*dx*(dr2-5*dz2))/dr7
+
+            pxyz = (15*dx*dy*dz)/dr7
 
             if itype==I_CB
                 fac = -n.m/dr3
@@ -456,50 +458,50 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
                     n2.maxx, n2.minx, n2.maxy, n2.miny, n2.maxz, n2.minz,
                     n2.dir, n2.pix, n2.iix, n2.fix,
                     n2.cix1, n2.cix2,
-                    n1.m*px,
-                    n1.m*pxx,
-                    n1.m*pxxx,
-                    n1.m*pxxy,
-                    n1.m*pxxz,
-                    n1.m*pxy,
-                    n1.m*pxyy,
-                    n1.m*pxyz,
-                    n1.m*pxz,
-                    n1.m*pxzz,
-                    n1.m*py,
-                    n1.m*pyy,
-                    n1.m*pyyy,
-                    n1.m*pyyz,
-                    n1.m*pyz,
-                    n1.m*pyzz,
-                    n1.m*pz,
-                    n1.m*pzz,
-                    n1.m*pzzz,
-                )                
+                    -n1.m*px,
+                     n1.m*pxx,
+                    -n1.m*pxxx,
+                    -n1.m*pxxy,
+                    -n1.m*pxxz,
+                     n1.m*pxy,
+                    -n1.m*pxyy,
+                    -n1.m*pxyz,
+                     n1.m*pxz,
+                    -n1.m*pxzz,
+                    -n1.m*py,
+                     n1.m*pyy,
+                    -n1.m*pyyy,
+                    -n1.m*pyyz,
+                     n1.m*pyz,
+                    -n1.m*pyzz,
+                    -n1.m*pz,
+                     n1.m*pzz,
+                    -n1.m*pzzz,
+                )
             end
             t.nodes[ix1] = Node(
                 n1.x, n1.y, n1.z, n1.m, n1.l,
                 n1.maxx, n1.minx, n1.maxy, n1.miny, n1.maxz, n1.minz,
                 n1.dir, n1.pix, n1.iix, n1.fix, n1.cix1, n1.cix2,
-                -m*px,
-                -m*pxx,
-                -m*pxxx,
-                -m*pxxy,
-                -m*pxxz,
-                -m*pxy,
-                -m*pxyy,
-                -m*pxyz,
-                -m*pxz,
-                -m*pxzz,
-                -m*py,
-                -m*pyy,
-                -m*pyyy,
-                -m*pyyz,
-                -m*pyz,
-                -m*pyzz,
-                -m*pz,
-                -m*pzz,
-                -m*pzzz,
+                m*px,
+                m*pxx,
+                m*pxxx,
+                m*pxxy,
+                m*pxxz,
+                m*pxy,
+                m*pxyy,
+                m*pxyz,
+                m*pxz,
+                m*pxzz,
+                m*py,
+                m*pyy,
+                m*pyyy,
+                m*pyyz,
+                m*pyz,
+                m*pyzz,
+                m*pz,
+                m*pzz,
+                m*pzzz,
             )
             continue
         end
@@ -607,4 +609,25 @@ end
 
 
 
+
+# p = -(x^2+y^2+z^2)^(-1/2)
+# px = x/(x^2 + y^2 + z^2)^(3/2)
+# pxx = (-2 x^2 + y^2 + z^2)/(x^2 + y^2 + z^2)^(5/2)
+# pxxx = (6 x^3 - 9 x (y^2 + z^2))/(x^2 + y^2 + z^2)^(7/2)
+# pxxy = (-3 y (-4 x^2 + y^2 + z^2))/(x^2 + y^2 + z^2)^(7/2)
+# pxxz = (-3 z (-4 x^2 + y^2 + z^2))/(x^2 + y^2 + z^2)^(7/2)
+# pxy = (-3 x y)/(x^2 + y^2 + z^2)^(5/2)
+# pxyy = (-3 y (-4 x^2 + y^2 + z^2))/(x^2 + y^2 + z^2)^(7/2)
+# pxyz = (15 x y z)/(x^2 + y^2 + z^2)^(7/2)
+# pxz = (-3 x z)/(x^2 + y^2 + z^2)^(5/2)
+# pxzz = (-3 x (x^2 + y^2 - 4 z^2))/(x^2 + y^2 + z^2)^(7/2)
+# py = y/(x^2 + y^2 + z^2)^(3/2)
+# pyy = (x^2 - 2 y^2 + z^2)/(x^2 + y^2 + z^2)^(5/2)
+# pyyy = (3 y (-3 x^2 + 2 y^2 - 3 z^2))/(x^2 + y^2 + z^2)^(7/2)
+# pyyz = (-3 z (x^2 - 4 y^2 + z^2))/(x^2 + y^2 + z^2)^(7/2)
+# pyz = (-3 y z)/(x^2 + y^2 + z^2)^(5/2)
+# pyzz = (-3 y (x^2 + y^2 - 4 z^2))/(x^2 + y^2 + z^2)^(7/2)
+# pz = z/(x^2 + y^2 + z^2)^(3/2)
+# pzz = (x^2 + y^2 - 2 z^2)/(x^2 + y^2 + z^2)^(5/2)
+# pzzz = (3 z (-3 x^2 - 3 y^2 + 2 z^2))/(x^2 + y^2 + z^2)^(7/2)
 
