@@ -147,7 +147,6 @@ end
 
 function group!(t::Tree)
     minx,maxx, miny,maxy, minz,maxz = getminmax(t)
-    l = max(maxx-minx, maxy-miny, maxz-minz)
 
     # create root node
     node_ix = 1
@@ -156,7 +155,7 @@ function group!(t::Tree)
         0.0,                 # y::Float64
         0.0,                 # z::Float64
         0.0,                 # m::Float64
-        l,
+        0.0,                 # l
         maxx,
         minx,
         maxy,
@@ -193,7 +192,7 @@ function group!(t::Tree)
                 0.0,               # y::Float64
                 0.0,               # z::Float64
                 0.0,               # m::Float64
-                0.0,
+                0.0,               # l
                 maxx,
                 minx,
                 maxy,
