@@ -288,6 +288,7 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
     n1 = n
     p1 = Particle(0.0,0.0,0.0,0.0,-1)
     p2 = p1
+    e = t.exps[1]
     t.num_exps_used = 0
 
     @inbounds while six > 0
@@ -641,7 +642,10 @@ end
 
 function collect!(t::Tree, ax::Vector{Float64},ay::Vector{Float64},az::Vector{Float64})
     n = t.nodes[1]
-    n_ = n
+    _n = n
+    p = t.particles[1]
+    e = t.exps[1]
+    _e = e
     @inbounds for i in 1:t.num_nodes_used
         eix = t.exp_ixs[i]
         eix < 0 && continue # node has no expansion...
@@ -662,8 +666,7 @@ function collect!(t::Tree, ax::Vector{Float64},ay::Vector{Float64},az::Vector{Fl
                 _n = t.nodes[n.cix2]
                 t.exps[_eix] = add_expansion_to_n1(_n,_e, n,e)
             end
-        end
-        if n.cix1<0 && n.cix2<0
+        elseif n.cix1<0
             # leaf node, apply force
             for pix in n.iix:n.fix
                 p = t.particles[pix]
@@ -675,29 +678,4 @@ function collect!(t::Tree, ax::Vector{Float64},ay::Vector{Float64},az::Vector{Fl
         end
     end
 end
-
-
-
-
-
-# p = -(x^2+y^2+z^2)^(-1/2)
-# px = x/(x^2 + y^2 + z^2)^(3/2)
-# pxx = (-2 x^2 + y^2 + z^2)/(x^2 + y^2 + z^2)^(5/2)
-# pxxx = (6 x^3 - 9 x (y^2 + z^2))/(x^2 + y^2 + z^2)^(7/2)
-# pxxy = (-3 y (-4 x^2 + y^2 + z^2))/(x^2 + y^2 + z^2)^(7/2)
-# pxxz = (-3 z (-4 x^2 + y^2 + z^2))/(x^2 + y^2 + z^2)^(7/2)
-# pxy = (-3 x y)/(x^2 + y^2 + z^2)^(5/2)
-# pxyy = (-3 y (-4 x^2 + y^2 + z^2))/(x^2 + y^2 + z^2)^(7/2)
-# pxyz = (15 x y z)/(x^2 + y^2 + z^2)^(7/2)
-# pxz = (-3 x z)/(x^2 + y^2 + z^2)^(5/2)
-# pxzz = (-3 x (x^2 + y^2 - 4 z^2))/(x^2 + y^2 + z^2)^(7/2)
-# py = y/(x^2 + y^2 + z^2)^(3/2)
-# pyy = (x^2 - 2 y^2 + z^2)/(x^2 + y^2 + z^2)^(5/2)
-# pyyy = (3 y (-3 x^2 + 2 y^2 - 3 z^2))/(x^2 + y^2 + z^2)^(7/2)
-# pyyz = (-3 z (x^2 - 4 y^2 + z^2))/(x^2 + y^2 + z^2)^(7/2)
-# pyz = (-3 y z)/(x^2 + y^2 + z^2)^(5/2)
-# pyzz = (-3 y (x^2 + y^2 - 4 z^2))/(x^2 + y^2 + z^2)^(7/2)
-# pz = z/(x^2 + y^2 + z^2)^(3/2)
-# pzz = (x^2 + y^2 - 2 z^2)/(x^2 + y^2 + z^2)^(5/2)
-# pzzz = (3 z (-3 x^2 - 3 y^2 + 2 z^2))/(x^2 + y^2 + z^2)^(7/2)
 
