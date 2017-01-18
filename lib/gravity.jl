@@ -109,7 +109,7 @@ function inform!(t::Tree)
             lco = sqrt(max(l1,l2,l3,l4,l5,l6,l7,l8))
             l = min(lco,lch)
         end
-        alpha = (m/t.total_mass)^(-0.1)
+        alpha = (m/t.total_mass)^(-0.1111111)
         t.nodes[i] = Node(
             x, # x::Float64
             y, # y::Float64
