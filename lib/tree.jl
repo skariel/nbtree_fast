@@ -1,23 +1,5 @@
 
-immutable Node
-    x::Float64
-    y::Float64
-    z::Float64
-    m::Float64
-    l::Float64 # maximal geometrical dimension
-    maxx::Float64
-    minx::Float64
-    maxy::Float64
-    miny::Float64
-    maxz::Float64
-    minz::Float64
-    dir::Int64 # direction node should be splitted (mod 3, 0==x, 1==y, 2==z)
-    pix::Int64 # parent index
-    iix::Int64 # first particle index
-    fix::Int64 # final particle index
-    cix1::Int64 # first child index
-    cix2::Int64 # second child index
-
+immutable NodeExp
     px::Float64
     pxx::Float64
     pxxx::Float64
@@ -38,6 +20,28 @@ immutable Node
     pzz::Float64
     pzzz::Float64
 end
+NodeExp() = NodeExp(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+
+immutable Node
+    x::Float64
+    y::Float64
+    z::Float64
+    m::Float64
+    l::Float64 # maximal geometrical dimension
+    maxx::Float64
+    minx::Float64
+    maxy::Float64
+    miny::Float64
+    maxz::Float64
+    minz::Float64
+    dir::Int64 # direction node should be splitted (mod 3, 0==x, 1==y, 2==z)
+    pix::Int64 # parent index
+    iix::Int64 # first particle index
+    fix::Int64 # final particle index
+    cix1::Int64 # first child index
+    cix2::Int64 # second child index
+end
+
 Node() = Node(
         0.0,                 # x::Float64
         0.0,                 # y::Float64
@@ -56,27 +60,43 @@ Node() = Node(
         -1,                  # fix
         -1,                  # cix1::Int64 # first child index
         -1,                  # cix2::Int64 # second child index        
-        0.0,0.0,0.0,0.0,0.0,
-        0.0,0.0,0.0,0.0,0.0,
-        0.0,0.0,0.0,0.0,0.0,
-        0.0,0.0,0.0,0.0,
     )
 
 type Tree
     total_mass::Float64
     nodes::Vector{Node}
+    exps::Vector{NodeExp}
+    exp_ixs::Vector{Int64}
     particles::Vector{Particle}
     stack1::Vector{Int64}
     stack2::Vector{Int64}
     stack3::Vector{Int64}
     num_nodes_used::Int64
-    S::Int64
+    num_exps_used::Int64
+    S::Int64                 # maximum number of particles per node
 end
 
 function Tree(particles, S)
-    nodec = round(Int64, 3.0*length(particles))
+    nodec = round(Int64, 0.8*length(particles))
     nodes = Node[Node() for i in 1:nodec]
-    Tree(sum(p.m for p in particles), nodes, particles, zeros(Int64,10000), zeros(Int64,10000), zeros(Int64,10000), 0, S)
+    exps = NodeExp[NodeExp() for i in 1:nodec]
+    exp_ixs = -ones(Int64,nodec)
+    stack1 = zeros(Int64,10000)
+    stack2 = zeros(Int64,10000)
+    stack3 = zeros(Int64,10000)
+    num_nodes_used = 0
+    num_exps_used = 0
+    Tree(
+        sum(p.m for p in particles),
+        nodes,
+        exps,
+        exp_ixs,
+        particles,
+        stack1,
+        stack2,
+        stack3,
+        num_nodes_used, num_exps_used,
+        S)
 end
 
 function getminmax(t::Tree)
@@ -157,10 +177,6 @@ function group!(t::Tree)
         length(t.particles), # fix
         -1,                  # cix1::Int64 # first child index
         -1,                  # cix2::Int64 # second child index        
-        0.0,0.0,0.0,0.0,0.0,
-        0.0,0.0,0.0,0.0,0.0,
-        0.0,0.0,0.0,0.0,0.0,
-        0.0,0.0,0.0,0.0,
     )
     # stack contains parents to be splitted
     # add root to stack
@@ -198,11 +214,6 @@ function group!(t::Tree)
                 split,             # pnum::Int64 # number of particles
                 -1,                # cix1::Int64 # first child index
                 -1,                # cix2::Int64 # second child index        
-                0.0,0.0,0.0,0.0,0.0,
-                0.0,0.0,0.0,0.0,0.0,
-                0.0,0.0,0.0,0.0,0.0,
-                0.0,0.0,0.0,0.0,
-                
             )
             if split-pn.iix+1 > t.S # comparing number of particles
                 # we have enough particles to split this node
@@ -236,10 +247,6 @@ function group!(t::Tree)
                 pn.fix,
                 node_ix, ### <<<--- this is the update!!!
                 pn.cix2, 
-                0.0,0.0,0.0,0.0,0.0,
-                0.0,0.0,0.0,0.0,0.0,
-                0.0,0.0,0.0,0.0,0.0,
-                0.0,0.0,0.0,0.0,                
             )
         end
 
@@ -265,12 +272,7 @@ function group!(t::Tree)
                 split+1,             # iix::Int64 # first particle index
                 pn.fix,                # pnum::Int64 # number of particles
                 -1,                  # cix1::Int64 # first child index
-                -1,                  # cix2::Int64 # second child index        
-                0.0,0.0,0.0,0.0,0.0,
-                0.0,0.0,0.0,0.0,0.0,
-                0.0,0.0,0.0,0.0,0.0,
-                0.0,0.0,0.0,0.0,
-                
+                -1,                  # cix2::Int64 # second child index                        
             )
             if pn.fix-split > t.S # comparing number of particles
                 # we have enough particles to pslit this node
@@ -305,10 +307,6 @@ function group!(t::Tree)
                 pn.fix,
                 pn.cix1,
                 node_ix, ### <<<--- this is the update!!!
-                0.0,0.0,0.0,0.0,0.0,
-                0.0,0.0,0.0,0.0,0.0,
-                0.0,0.0,0.0,0.0,0.0,
-                0.0,0.0,0.0,0.0,                
             )
         end
     end

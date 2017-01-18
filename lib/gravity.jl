@@ -128,15 +128,11 @@ function inform!(t::Tree)
             n.fix, # 
             n.cix1, # cix1::Int64 # first child index
             n.cix2, # cix2::Int64 # second child index
-            0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0,  
         )
     end
 end
 
-@inline function add_expansion_to_n1(n1, n2)
+@inline function add_expansion_to_n1(n1, e1, n2, e2)
     dx = n1.x-n2.x
     dy = n1.y-n2.y
     dz = n1.z-n2.z
@@ -144,89 +140,71 @@ end
     dy2 = dy*dy
     dz2 = dz*dz
 
-    new_px = n2.px+n1.px +
-        n2.pxx  * dx    +
-        n2.pxxx * dx2/2 +
-        n2.pxxy * dx*dy +
-        n2.pxxz * dx*dz +
-        n2.pxy  * dy    +
-        n2.pxyy * dy2/2 +
-        n2.pxyz * dy*dz + 
-        n2.pxz  * dz    +
-        n2.pxzz * dz2/2
-    new_pxx = n2.pxx+n1.pxx    +
-        n2.pxxx * dx    +
-        n2.pxxy * dy    +
-        n2.pxxz * dz    
-    new_pxxx = n2.pxxx+n1.pxxx
-    new_pxxy = n2.pxxy+n1.pxxy
-    new_pxxz = n2.pxxz+n1.pxxz
-    new_pxy = n2.pxy+n1.pxy    +
-        n2.pxxy * dx    +
-        n2.pxyy * dy    +
-        n2.pxyz * dz
-    new_pxyy = n2.pxyy+n1.pxyy 
-    new_pxyz = n2.pxyz+n1.pxyz
-    new_pxz = n2.pxz+n1.pxz +
-        n2.pxxz * dx    +
-        n2.pxyz * dy    + 
-        n2.pxzz * dz
-    new_pxzz = n2.pxzz+n1.pxzz
-    new_py = n2.py+n1.py      +
-        n2.pxxy * dx2/2 +
-        n2.pxy  * dx    +
-        n2.pxyy * dx*dy +
-        n2.pxyz * dx*dz +
-        n2.pyy  * dy    + 
-        n2.pyyy * dy2/2 +
-        n2.pyyz * dy*dz +
-        n2.pyz  * dz    +
-        n2.pyzz * dz2/2
-    new_pyy = n2.pyy+n1.pyy    +
-        n2.pxyy * dx    +
-        n2.pyyy * dy    +
-        n2.pyyz * dz 
-    new_pyyy = n2.pyyy+n1.pyyy
-    new_pyyz = n2.pyyz+n1.pyyz
-    new_pyz = n2.pyz+n1.pyz    +
-        n2.pxyz * dx    +
-        n2.pyyz * dy    +
-        n2.pyzz * dz
-    new_pyzz = n2.pyzz+n1.pyzz
-    new_pz = n2.pz+n1.pz      +
-        n2.pxxz * dx2/2 +
-        n2.pxyz * dx*dy +
-        n2.pxz  * dx    +
-        n2.pxzz * dx*dz +
-        n2.pyyz * dy2/2 +
-        n2.pyz  * dy    +
-        n2.pyzz * dy*dz +
-        n2.pzz  * dz    +
-        n2.pzzz * dz2/2
-    new_pzz = n2.pzz+n1.pzz    +
-        n2.pxzz * dx    +
-        n2.pyzz * dy    +
-        n2.pzzz * dz
-    new_pzzz = n2.pzzz+n1.pzzz
-    return Node(
-        n1.x,
-        n1.y,
-        n1.z,
-        n1.m,
-        n1.l,
-        n1.maxx,
-        n1.minx,
-        n1.maxy,
-        n1.miny,
-        n1.maxz,
-        n1.minz,
-        n1.dir,
-        n1.pix,
-        n1.iix,
-        n1.fix,
-        n1.cix1,
-        n1.cix2,
-
+    new_px = e2.px+e1.px +
+        e2.pxx  * dx    +
+        e2.pxxx * dx2/2 +
+        e2.pxxy * dx*dy +
+        e2.pxxz * dx*dz +
+        e2.pxy  * dy    +
+        e2.pxyy * dy2/2 +
+        e2.pxyz * dy*dz + 
+        e2.pxz  * dz    +
+        e2.pxzz * dz2/2
+    new_pxx = e2.pxx+e1.pxx    +
+        e2.pxxx * dx    +
+        e2.pxxy * dy    +
+        e2.pxxz * dz    
+    new_pxxx = e2.pxxx+e1.pxxx
+    new_pxxy = e2.pxxy+e1.pxxy
+    new_pxxz = e2.pxxz+e1.pxxz
+    new_pxy = e2.pxy+e1.pxy    +
+        e2.pxxy * dx    +
+        e2.pxyy * dy    +
+        e2.pxyz * dz
+    new_pxyy = e2.pxyy+e1.pxyy 
+    new_pxyz = e2.pxyz+e1.pxyz
+    new_pxz = e2.pxz+e1.pxz +
+        e2.pxxz * dx    +
+        e2.pxyz * dy    + 
+        e2.pxzz * dz
+    new_pxzz = e2.pxzz+e1.pxzz
+    new_py = e2.py+e1.py      +
+        e2.pxxy * dx2/2 +
+        e2.pxy  * dx    +
+        e2.pxyy * dx*dy +
+        e2.pxyz * dx*dz +
+        e2.pyy  * dy    + 
+        e2.pyyy * dy2/2 +
+        e2.pyyz * dy*dz +
+        e2.pyz  * dz    +
+        e2.pyzz * dz2/2
+    new_pyy = e2.pyy+e1.pyy    +
+        e2.pxyy * dx    +
+        e2.pyyy * dy    +
+        e2.pyyz * dz 
+    new_pyyy = e2.pyyy+e1.pyyy
+    new_pyyz = e2.pyyz+e1.pyyz
+    new_pyz = e2.pyz+e1.pyz    +
+        e2.pxyz * dx    +
+        e2.pyyz * dy    +
+        e2.pyzz * dz
+    new_pyzz = e2.pyzz+e1.pyzz
+    new_pz = e2.pz+e1.pz      +
+        e2.pxxz * dx2/2 +
+        e2.pxyz * dx*dy +
+        e2.pxz  * dx    +
+        e2.pxzz * dx*dz +
+        e2.pyyz * dy2/2 +
+        e2.pyz  * dy    +
+        e2.pyzz * dy*dz +
+        e2.pzz  * dz    +
+        e2.pzzz * dz2/2
+    new_pzz = e2.pzz+e1.pzz    +
+        e2.pxzz * dx    +
+        e2.pyzz * dy    +
+        e2.pzzz * dz
+    new_pzzz = e2.pzzz+e1.pzzz
+    return NodeExp(
         new_px,
         new_pxx,
         new_pxxx,
@@ -249,7 +227,7 @@ end
     )
 end
 
-@inline function get_accel_from_node(n, x,y,z)
+@inline function get_accel_from_node(n, e, x,y,z)
     dx = x-n.x
     dy = y-n.y
     dz = z-n.z
@@ -257,38 +235,38 @@ end
     dy2 = dy*dy
     dz2 = dz*dz
 
-    ax = n.px +
-        n.pxx*dx +
-        n.pxxx*dx2/2 +
-        n.pxxy*dx*dy +
-        n.pxxz*dx*dz +
-        n.pxy*dy +
-        n.pxyy*dy2/2 +
-        n.pxyz*dy*dz +
-        n.pxz*dz +
-        n.pxzz*dz2/2
+    ax = e.px +
+        e.pxx*dx +
+        e.pxxx*dx2/2 +
+        e.pxxy*dx*dy +
+        e.pxxz*dx*dz +
+        e.pxy*dy +
+        e.pxyy*dy2/2 +
+        e.pxyz*dy*dz +
+        e.pxz*dz +
+        e.pxzz*dz2/2
 
-    ay = n.py +
-        n.pxxy*dx2/2 +
-        n.pxy*dx +
-        n.pxyy*dx*dy +
-        n.pxyz*dx*dz +
-        n.pyy*dy +
-        n.pyyy*dy2/2 +
-        n.pyyz*dy*dz +
-        n.pyz*dz +
-        n.pyzz*dz2/2
+    ay = e.py +
+        e.pxxy*dx2/2 +
+        e.pxy*dx +
+        e.pxyy*dx*dy +
+        e.pxyz*dx*dz +
+        e.pyy*dy +
+        e.pyyy*dy2/2 +
+        e.pyyz*dy*dz +
+        e.pyz*dz +
+        e.pyzz*dz2/2
     
-    az = n.pz +
-        n.pxxz*dx2/2 +
-        n.pxyz*dx*dy +
-        n.pxz*dx +
-        n.pxzz*dx*dz +
-        n.pyyz*dy2/2 +
-        n.pyz*dy +
-        n.pyzz*dy*dz +
-        n.pzz*dz +
-        n.pzzz*dz2/2
+    az = e.pz +
+        e.pxxz*dx2/2 +
+        e.pxyz*dx*dy +
+        e.pxz*dx +
+        e.pxzz*dx*dz +
+        e.pyyz*dy2/2 +
+        e.pyz*dy +
+        e.pyzz*dy*dz +
+        e.pzz*dz +
+        e.pzzz*dz2/2
 
     ax, ay, az
 end
@@ -310,6 +288,7 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
     n1 = n
     p1 = Particle(0.0,0.0,0.0,0.0,-1)
     p2 = p1
+    t.num_exps_used = 0
 
     @inbounds while six > 0
         ix1 = t.stack1[six]
@@ -457,56 +436,109 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
                 ay[ix2] += dy*fac
                 az[ix2] += dz*fac                
             else
-                t.nodes[ix2] = Node(
-                    n.x, n.y, n.z, n.m, n.l,
-                    n.maxx, n.minx, n.maxy, n.miny, n.maxz, n.minz,
-                    n.dir, n.pix, n.iix, n.fix,
-                    n.cix1, n.cix2,
-                    n.px-n1.m*px,
-                    n.pxx+n1.m*pxx,
-                    n.pxxx-n1.m*pxxx,
-                    n.pxxy-n1.m*pxxy,
-                    n.pxxz-n1.m*pxxz,
-                    n.pxy+n1.m*pxy,
-                    n.pxyy-n1.m*pxyy,
-                    n.pxyz-n1.m*pxyz,
-                    n.pxz+n1.m*pxz,
-                    n.pxzz-n1.m*pxzz,
-                    n.py-n1.m*py,
-                    n.pyy+n1.m*pyy,
-                    n.pyyy-n1.m*pyyy,
-                    n.pyyz-n1.m*pyyz,
-                    n.pyz+n1.m*pyz,
-                    n.pyzz-n1.m*pyzz,
-                    n.pz-n1.m*pz,
-                    n.pzz+n1.m*pzz,
-                    n.pzzz-n1.m*pzzz,
-                )
+                eix = t.exp_ixs[ix2]
+                if eix < 0
+                    # create a new expansion
+                    t.num_exps_used += 1
+                    t.exp_ixs[ix2] = t.num_exps_used
+                    t.exps[t.num_exps_used] = NodeExp(
+                        -n1.m*px,
+                        +n1.m*pxx,
+                        -n1.m*pxxx,
+                        -n1.m*pxxy,
+                        -n1.m*pxxz,
+                        +n1.m*pxy,
+                        -n1.m*pxyy,
+                        -n1.m*pxyz,
+                        +n1.m*pxz,
+                        -n1.m*pxzz,
+                        -n1.m*py,
+                        +n1.m*pyy,
+                        -n1.m*pyyy,
+                        -n1.m*pyyz,
+                        +n1.m*pyz,
+                        -n1.m*pyzz,
+                        -n1.m*pz,
+                        +n1.m*pzz,
+                        -n1.m*pzzz,                        
+                    )
+                else
+                    # use existing expansion
+                    e = t.exps[eix]
+                    t.exps[eix] = NodeExp(
+                        e.px-n1.m*px,
+                        e.pxx+n1.m*pxx,
+                        e.pxxx-n1.m*pxxx,
+                        e.pxxy-n1.m*pxxy,
+                        e.pxxz-n1.m*pxxz,
+                        e.pxy+n1.m*pxy,
+                        e.pxyy-n1.m*pxyy,
+                        e.pxyz-n1.m*pxyz,
+                        e.pxz+n1.m*pxz,
+                        e.pxzz-n1.m*pxzz,
+                        e.py-n1.m*py,
+                        e.pyy+n1.m*pyy,
+                        e.pyyy-n1.m*pyyy,
+                        e.pyyz-n1.m*pyyz,
+                        e.pyz+n1.m*pyz,
+                        e.pyzz-n1.m*pyzz,
+                        e.pz-n1.m*pz,
+                        e.pzz+n1.m*pzz,
+                        e.pzzz-n1.m*pzzz,
+                    ) 
+                end
             end
-            t.nodes[ix1] = Node(
-                n1.x, n1.y, n1.z, n1.m, n1.l,
-                n1.maxx, n1.minx, n1.maxy, n1.miny, n1.maxz, n1.minz,
-                n1.dir, n1.pix, n1.iix, n1.fix, n1.cix1, n1.cix2,
-                n1.px + m*px,
-                n1.pxx + m*pxx,
-                n1.pxxx + m*pxxx,
-                n1.pxxy + m*pxxy,
-                n1.pxxz + m*pxxz,
-                n1.pxy + m*pxy,
-                n1.pxyy + m*pxyy,
-                n1.pxyz + m*pxyz,
-                n1.pxz + m*pxz,
-                n1.pxzz + m*pxzz,
-                n1.py + m*py,
-                n1.pyy + m*pyy,
-                n1.pyyy + m*pyyy,
-                n1.pyyz + m*pyyz,
-                n1.pyz + m*pyz,
-                n1.pyzz + m*pyzz,
-                n1.pz + m*pz,
-                n1.pzz + m*pzz,
-                n1.pzzz + m*pzzz,
-            )
+            eix = t.exp_ixs[ix1]
+            if eix < 0
+                # create a new expansion
+                t.num_exps_used += 1
+                t.exp_ixs[ix1] = t.num_exps_used
+                t.exps[t.num_exps_used] = NodeExp(
+                    m*px,
+                    m*pxx,
+                    m*pxxx,
+                    m*pxxy,
+                    m*pxxz,
+                    m*pxy,
+                    m*pxyy,
+                    m*pxyz,
+                    m*pxz,
+                    m*pxzz,
+                    m*py,
+                    m*pyy,
+                    m*pyyy,
+                    m*pyyz,
+                    m*pyz,
+                    m*pyzz,
+                    m*pz,
+                    m*pzz,
+                    m*pzzz,                        
+                )
+            else
+                # use existing expansion
+                e = t.exps[eix]
+                t.exps[eix] = NodeExp(
+                    e.px+m*px,
+                    e.pxx+m*pxx,
+                    e.pxxx+m*pxxx,
+                    e.pxxy+m*pxxy,
+                    e.pxxz+m*pxxz,
+                    e.pxy+m*pxy,
+                    e.pxyy+m*pxyy,
+                    e.pxyz+m*pxyz,
+                    e.pxz+m*pxz,
+                    e.pxzz+m*pxzz,
+                    e.py+m*py,
+                    e.pyy+m*pyy,
+                    e.pyyy+m*pyyy,
+                    e.pyyz+m*pyyz,
+                    e.pyz+m*pyz,
+                    e.pyzz+m*pyzz,
+                    e.pz+m*pz,
+                    e.pzz+m*pzz,
+                    e.pzzz+m*pzzz,
+                ) 
+            end
             continue
         end
 
@@ -611,20 +643,31 @@ function collect!(t::Tree, ax::Vector{Float64},ay::Vector{Float64},az::Vector{Fl
     n = t.nodes[1]
     n_ = n
     @inbounds for i in 1:t.num_nodes_used
+        eix = t.exp_ixs[i]
+        eix < 0 && continue # node has no expansion...
+        e = t.exps[eix]
         n = t.nodes[i]
         if n.cix1 > 0
-            _n = t.nodes[n.cix1]
-            t.nodes[n.cix1] = add_expansion_to_n1(_n,n)
+            _eix = t.exp_ixs[n.cix1]
+            if _eix > 0
+                _e = t.exps[_eix]
+                _n = t.nodes[n.cix1]
+                t.exps[_eix] = add_expansion_to_n1(_n,_e, n,e)
+            end
         end
-        if n.cix2 > 0            
-            _n = t.nodes[n.cix2]
-            t.nodes[n.cix2] = add_expansion_to_n1(_n,n)
+        if n.cix2 > 0
+            _eix = t.exp_ixs[n.cix2]
+            if _eix > 0
+                _e = t.exps[_eix]
+                _n = t.nodes[n.cix2]
+                t.exps[_eix] = add_expansion_to_n1(_n,_e, n,e)
+            end
         end
         if n.cix1<0 && n.cix2<0
             # leaf node, apply force
             for pix in n.iix:n.fix
                 p = t.particles[pix]
-                dax,day,daz = get_accel_from_node(n, p.x,p.y,p.z)
+                dax,day,daz = get_accel_from_node(n, e, p.x,p.y,p.z)
                 ax[pix] += dax
                 ay[pix] += day
                 az[pix] += daz

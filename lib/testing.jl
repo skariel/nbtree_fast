@@ -143,8 +143,7 @@ function test_in_cell_mass(t::Tree)
     end
 end
 
-function get_random_node()
-    Node(
+get_random_node() = Node(
         randn(), # x::Float64
         randn(), # y::Float64
         randn(), # z::Float64
@@ -162,7 +161,9 @@ function get_random_node()
         -1,  # fix::Int64 # final particle index
         -1,  # cix1::Int64 # first child index
         -1,  # cix2::Int64 # second child index
+    )
 
+get_random_exp() = NodeExp(
         randn(), # px::Float64
         randn(), # pxx::Float64
         randn(), # pxxx::Float64
@@ -183,9 +184,8 @@ function get_random_node()
         randn(), # pzz::Float64
         randn(), # pzzz::Float64
     )
-end
 
-function calc_pot(n, x,y,z)
+function calc_pot(n,e, x,y,z)
     dx = x-n.x
     dy = y-n.y
     dz = z-n.z
@@ -193,48 +193,49 @@ function calc_pot(n, x,y,z)
     dy2 = dy*dy
     dz2 = dz*dz
 
-    return n.px*dx + 
-        n.pxx*dx2/2 +
-        n.pxxx*dx2*dx/6 +
-        n.pxxy*dx2/2*dy +
-        n.pxxz*dx2/2*dz +
-        n.pxy*dx*dy +
-        n.pxyy*dx*dy2/2 +
-        n.pxyz*dx*dy*dz +
-        n.pxz*dx*dz +
-        n.pxzz*dx*dz2/2 +
-        n.py*dy +
-        n.pyy*dy2/2 +
-        n.pyyy*dy2*dy/6 +
-        n.pyyz*dy2/2*dz +
-        n.pyz*dy*dz +
-        n.pyzz*dy*dz2/2 +
-        n.pz*dz +
-        n.pzz*dz2/2 +
-        n.pzzz*dz2*dz/6    
+    return e.px*dx + 
+        e.pxx*dx2/2 +
+        e.pxxx*dx2*dx/6 +
+        e.pxxy*dx2/2*dy +
+        e.pxxz*dx2/2*dz +
+        e.pxy*dx*dy +
+        e.pxyy*dx*dy2/2 +
+        e.pxyz*dx*dy*dz +
+        e.pxz*dx*dz +
+        e.pxzz*dx*dz2/2 +
+        e.py*dy +
+        e.pyy*dy2/2 +
+        e.pyyy*dy2*dy/6 +
+        e.pyyz*dy2/2*dz +
+        e.pyz*dy*dz +
+        e.pyzz*dy*dz2/2 +
+        e.pz*dz +
+        e.pzz*dz2/2 +
+        e.pzzz*dz2*dz/6    
 end
 
-function get_numerical_ax(n, x,y,z)
+function get_numerical_ax(n,e, x,y,z)
     dx = 1.0e-8*(x-n.x)
-    (calc_pot(n,x+dx,y,z) - calc_pot(n,x,y,z))/dx
+    (calc_pot(n,e, x+dx,y,z) - calc_pot(n,e, x,y,z))/dx
 end
 
-function get_numerical_ay(n, x,y,z)
+function get_numerical_ay(n,e, x,y,z)
     dy = 1.0e-8*(y-n.y)
-    (calc_pot(n,x,y+dy,z) - calc_pot(n,x,y,z))/dy
+    (calc_pot(n,e, x,y+dy,z) - calc_pot(n,e, x,y,z))/dy
 end
 
-function get_numerical_az(n, x,y,z)
+function get_numerical_az(n,e, x,y,z)
     dz = 1.0e-8*(z-n.z)
-    (calc_pot(n,x,y,z+dz) - calc_pot(n,x,y,z))/dz
+    (calc_pot(n,e, x,y,z+dz) - calc_pot(n,e, x,y,z))/dz
 end
 
 function test_acc()
     tot = 0
     for i in 1:1000000
         n = get_random_node()
+        e = get_random_exp()
         x=randn(); y=randn(); z=randn();
-        dax,day,daz = get_accel_from_node(n, x,y,z)
+        dax,day,daz = get_accel_from_node(n,e, x,y,z)
         abs(x-n.x)<1e-1&&continue
         abs(y-n.y)<1e-1&&continue
         abs(z-n.z)<1e-1&&continue
@@ -242,9 +243,9 @@ function test_acc()
         abs(day)<1e-3 && continue
         abs(daz)<1e-3 && continue
         tot+=1
-        nax = get_numerical_ax(n, x,y,z)
-        nay = get_numerical_ay(n, x,y,z)
-        naz = get_numerical_az(n, x,y,z)
+        nax = get_numerical_ax(n,e, x,y,z)
+        nay = get_numerical_ay(n,e, x,y,z)
+        naz = get_numerical_az(n,e, x,y,z)
         dx = abs((nax-dax)/dax)
         dy = abs((nay-day)/day)
         dz = abs((naz-daz)/daz)
@@ -284,10 +285,12 @@ function test_mov()
     tot = 0
     for i in 1:1000000
         n1 = get_random_node()
+        e1 = get_random_exp()
         x=randn(); y=randn(); z=randn();
-        dax1,day1,daz1 = get_accel_from_node(n1, x,y,z)
+        dax1,day1,daz1 = get_accel_from_node(n1, e1, x,y,z)
         n2 = get_random_node()
-        dax2,day2,daz2 = get_accel_from_node(n2, x,y,z)
+        e2 = get_random_exp()
+        dax2,day2,daz2 = get_accel_from_node(n2, e2, x,y,z)
 
         abs(x-n1.x)<1e-1&&continue
         abs(y-n1.y)<1e-1&&continue
@@ -309,8 +312,8 @@ function test_mov()
         day= day1 + day2
         daz= daz1 + daz2
          
-        n1 = add_expansion_to_n1(n1, n2)
-        nax, nay, naz = get_accel_from_node(n1, x,y,z)
+        e1 = add_expansion_to_n1(n1,e1, n2,e2)
+        nax, nay, naz = get_accel_from_node(n1,e1, x,y,z)
 
         dx = abs((nax-dax)/dax)
         dy = abs((nay-day)/day)
@@ -353,8 +356,8 @@ function test_exp()
         -2.0, 2.0, 1.0, 1.0, 1.0,
         1.0, -1.0, 1.0, -1.0, 1.0, -1.0,
         0, -1, -1, -1, -1, -1, 
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
     )   
+    e1 = NodeExp()
 
     p = Particle(5.0,0.0,0.0,1.0,-1)
 
@@ -414,10 +417,7 @@ function test_exp()
 
     pxyz = 15*dx*dy*dz/dr7
 
-    n1 = Node(
-        -2.0, 2.0, 1.0, n1.m, n1.l,
-        1.0, -1.0, 1.0, -1.0, 1.0, -1.0,
-        n1.dir, n1.pix, n1.iix, n1.fix, n1.cix1, n1.cix2,
+    e1 = NodeExp(
         m*px,
         m*pxx,
         m*pxxx,
@@ -441,8 +441,8 @@ function test_exp()
     tx = n1.minx
     ty = n1.miny
     tz = n1.maxz
-    @show get_accel_from_node(n1, n1.x,n1.y,n1.z)[1] 
-    @show get_accel_from_node(n1, tx,ty,tz)[1]
+    @show get_accel_from_node(n1,e1, n1.x,n1.y,n1.z)[1] 
+    @show get_accel_from_node(n1,e1, tx,ty,tz)[1]
 
     dx = x-tx
     dy = y-ty
