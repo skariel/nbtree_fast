@@ -289,8 +289,6 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
     p1 = Particle(0.0,0.0,0.0,0.0,-1)
     p2 = p1
     e = t.exps[1]
-    t.num_exps_used = 0
-
     @inbounds while six > 0
         ix1 = t.stack1[six]
         ix2 = t.stack2[six]
@@ -305,7 +303,7 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
                 # perform direct summation
                 for i1 in n.iix:(n.fix-1)
                     p1 = t.particles[i1]
-                    for i2 in (i1+1):n.fix
+                    @fastmath @inbounds @simd for i2 in (i1+1):n.fix
                         p2 = t.particles[i2]
                         dx = p2.x - p1.x
                         dy = p2.y - p1.y
@@ -351,7 +349,7 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
         if itype==I_CB && nbody1<16
             # just do direct summation
             p2 = t.particles[ix2]
-            @inbounds for i1 in n1.iix:n1.fix
+            @fastmath @inbounds @simd for i1 in n1.iix:n1.fix
                 p1 = t.particles[i1]
                 dx = p2.x - p1.x
                 dy = p2.y - p1.y
@@ -396,7 +394,7 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
         dr = sqrt(dr2)
         M = n1.m+m
         fac = (M/t.total_mass)^0.1
-        if (n1.l + l)/dr < alpha/fac
+        @fastmath if (n1.l + l)/dr < alpha/fac
             # MAC succesful, execute interaction
             dr3 = dr2*dr
             dr5 = dr3*dr2
@@ -437,109 +435,51 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
                 ay[ix2] += dy*fac
                 az[ix2] += dz*fac                
             else
-                eix = t.exp_ixs[ix2]
-                if eix < 0
-                    # create a new expansion
-                    t.num_exps_used += 1
-                    t.exp_ixs[ix2] = t.num_exps_used
-                    t.exps[t.num_exps_used] = NodeExp(
-                        -n1.m*px,
-                        +n1.m*pxx,
-                        -n1.m*pxxx,
-                        -n1.m*pxxy,
-                        -n1.m*pxxz,
-                        +n1.m*pxy,
-                        -n1.m*pxyy,
-                        -n1.m*pxyz,
-                        +n1.m*pxz,
-                        -n1.m*pxzz,
-                        -n1.m*py,
-                        +n1.m*pyy,
-                        -n1.m*pyyy,
-                        -n1.m*pyyz,
-                        +n1.m*pyz,
-                        -n1.m*pyzz,
-                        -n1.m*pz,
-                        +n1.m*pzz,
-                        -n1.m*pzzz,                        
-                    )
-                else
-                    # use existing expansion
-                    e = t.exps[eix]
-                    t.exps[eix] = NodeExp(
-                        e.px-n1.m*px,
-                        e.pxx+n1.m*pxx,
-                        e.pxxx-n1.m*pxxx,
-                        e.pxxy-n1.m*pxxy,
-                        e.pxxz-n1.m*pxxz,
-                        e.pxy+n1.m*pxy,
-                        e.pxyy-n1.m*pxyy,
-                        e.pxyz-n1.m*pxyz,
-                        e.pxz+n1.m*pxz,
-                        e.pxzz-n1.m*pxzz,
-                        e.py-n1.m*py,
-                        e.pyy+n1.m*pyy,
-                        e.pyyy-n1.m*pyyy,
-                        e.pyyz-n1.m*pyyz,
-                        e.pyz+n1.m*pyz,
-                        e.pyzz-n1.m*pyzz,
-                        e.pz-n1.m*pz,
-                        e.pzz+n1.m*pzz,
-                        e.pzzz-n1.m*pzzz,
-                    ) 
-                end
-            end
-            eix = t.exp_ixs[ix1]
-            if eix < 0
-                # create a new expansion
-                t.num_exps_used += 1
-                t.exp_ixs[ix1] = t.num_exps_used
-                t.exps[t.num_exps_used] = NodeExp(
-                    m*px,
-                    m*pxx,
-                    m*pxxx,
-                    m*pxxy,
-                    m*pxxz,
-                    m*pxy,
-                    m*pxyy,
-                    m*pxyz,
-                    m*pxz,
-                    m*pxzz,
-                    m*py,
-                    m*pyy,
-                    m*pyyy,
-                    m*pyyz,
-                    m*pyz,
-                    m*pyzz,
-                    m*pz,
-                    m*pzz,
-                    m*pzzz,                        
+                e = t.exps[ix2]
+                t.exps[ix2] = NodeExp(
+                    e.px-n1.m*px,
+                    e.pxx+n1.m*pxx,
+                    e.pxxx-n1.m*pxxx,
+                    e.pxxy-n1.m*pxxy,
+                    e.pxxz-n1.m*pxxz,
+                    e.pxy+n1.m*pxy,
+                    e.pxyy-n1.m*pxyy,
+                    e.pxyz-n1.m*pxyz,
+                    e.pxz+n1.m*pxz,
+                    e.pxzz-n1.m*pxzz,
+                    e.py-n1.m*py,
+                    e.pyy+n1.m*pyy,
+                    e.pyyy-n1.m*pyyy,
+                    e.pyyz-n1.m*pyyz,
+                    e.pyz+n1.m*pyz,
+                    e.pyzz-n1.m*pyzz,
+                    e.pz-n1.m*pz,
+                    e.pzz+n1.m*pzz,
+                    e.pzzz-n1.m*pzzz,
                 )
-            else
-                # use existing expansion
-                e = t.exps[eix]
-                t.exps[eix] = NodeExp(
-                    e.px+m*px,
-                    e.pxx+m*pxx,
-                    e.pxxx+m*pxxx,
-                    e.pxxy+m*pxxy,
-                    e.pxxz+m*pxxz,
-                    e.pxy+m*pxy,
-                    e.pxyy+m*pxyy,
-                    e.pxyz+m*pxyz,
-                    e.pxz+m*pxz,
-                    e.pxzz+m*pxzz,
-                    e.py+m*py,
-                    e.pyy+m*pyy,
-                    e.pyyy+m*pyyy,
-                    e.pyyz+m*pyyz,
-                    e.pyz+m*pyz,
-                    e.pyzz+m*pyzz,
-                    e.pz+m*pz,
-                    e.pzz+m*pzz,
-                    e.pzzz+m*pzzz,
-                ) 
             end
+            e = t.exps[ix1]
+            t.exps[ix1] = NodeExp(
+                e.px+m*px,
+                e.pxx+m*pxx,
+                e.pxxx+m*pxxx,
+                e.pxxy+m*pxxy,
+                e.pxxz+m*pxxz,
+                e.pxy+m*pxy,
+                e.pxyy+m*pxyy,
+                e.pxyz+m*pxyz,
+                e.pxz+m*pxz,
+                e.pxzz+m*pxzz,
+                e.py+m*py,
+                e.pyy+m*pyy,
+                e.pyyy+m*pyyy,
+                e.pyyz+m*pyyz,
+                e.pyz+m*pyz,
+                e.pyzz+m*pyzz,
+                e.pz+m*pz,
+                e.pzz+m*pzz,
+                e.pzzz+m*pzzz,
+            ) 
             continue
         end
 
@@ -551,7 +491,7 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
             if nbody1*nbody2 < 64
                 @inbounds for i1 in n1.iix:n1.fix
                     p1 = t.particles[i1]
-                    @inbounds for i2 in n.iix:n.fix
+                    @fastmath @inbounds @simd for i2 in n.iix:n.fix
                         p2 = t.particles[i2]
                         dx = p2.x - p1.x
                         dy = p2.y - p1.y
@@ -603,7 +543,7 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
         # test for postconditions for direct summation
         if nbody1<64 || (n1.cix1<0 && n1.cix2<0)
             p2 = t.particles[ix2]
-            @inbounds for i1 in n1.iix:n1.fix
+            @fastmath @inbounds @simd for i1 in n1.iix:n1.fix
                 p1 = t.particles[i1]
                 dx = p2.x - p1.x
                 dy = p2.y - p1.y
@@ -646,36 +586,31 @@ function collect!(t::Tree, ax::Vector{Float64},ay::Vector{Float64},az::Vector{Fl
     p = t.particles[1]
     e = t.exps[1]
     _e = e
-    @inbounds for i in 1:t.num_nodes_used
-        eix = t.exp_ixs[i]
-        eix < 0 && continue # node has no expansion...
-        e = t.exps[eix]
+    @fastmath @inbounds for i in 1:t.num_nodes_used
+        e = t.exps[i]
         n = t.nodes[i]
         if n.cix1 > 0
-            _eix = t.exp_ixs[n.cix1]
-            if _eix > 0
-                _e = t.exps[_eix]
-                _n = t.nodes[n.cix1]
-                t.exps[_eix] = add_expansion_to_n1(_n,_e, n,e)
-            end
+            _e = t.exps[n.cix1]
+            _n = t.nodes[n.cix1]
+            t.exps[n.cix1] = add_expansion_to_n1(_n,_e, n,e)
         end
         if n.cix2 > 0
-            _eix = t.exp_ixs[n.cix2]
-            if _eix > 0
-                _e = t.exps[_eix]
-                _n = t.nodes[n.cix2]
-                t.exps[_eix] = add_expansion_to_n1(_n,_e, n,e)
-            end
-        elseif n.cix1<0
-            # leaf node, apply force
-            for pix in n.iix:n.fix
-                p = t.particles[pix]
-                dax,day,daz = get_accel_from_node(n, e, p.x,p.y,p.z)
-                ax[pix] += dax
-                ay[pix] += day
-                az[pix] += daz
-            end
+            _e = t.exps[n.cix2]
+            _n = t.nodes[n.cix2]
+            t.exps[n.cix2] = add_expansion_to_n1(_n,_e, n,e)
         end
+    end
+end
+
+function deliver!(t::Tree, ax::Vector{Float64},ay::Vector{Float64},az::Vector{Float64})
+    @fastmath @inbounds @simd for i in 1:length(t.particles)
+        p = t.particles[i]
+        n = t.nodes[p.pix]
+        e = t.exps[p.pix]
+        dax,day,daz = get_accel_from_node(n, e, p.x,p.y,p.z)
+        ax[i] += dax
+        ay[i] += day
+        az[i] += daz
     end
 end
 

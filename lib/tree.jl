@@ -66,13 +66,11 @@ type Tree
     total_mass::Float64
     nodes::Vector{Node}
     exps::Vector{NodeExp}
-    exp_ixs::Vector{Int64}
     particles::Vector{Particle}
     stack1::Vector{Int64}
     stack2::Vector{Int64}
     stack3::Vector{Int64}
     num_nodes_used::Int64
-    num_exps_used::Int64
     S::Int64                 # maximum number of particles per node
 end
 
@@ -85,17 +83,15 @@ function Tree(particles, S)
     stack2 = zeros(Int64,10000)
     stack3 = zeros(Int64,10000)
     num_nodes_used = 0
-    num_exps_used = 0
     Tree(
         sum(p.m for p in particles),
         nodes,
         exps,
-        exp_ixs,
         particles,
         stack1,
         stack2,
         stack3,
-        num_nodes_used, num_exps_used,
+        num_nodes_used,
         S)
 end
 
@@ -134,10 +130,8 @@ function get_minmax_low(n::Node)
         n.minx,n.maxx-(n.maxx-n.minx)/2, n.miny,n.maxy, n.minz,n.maxz
     elseif n.dir==1
         n.minx,n.maxx, n.miny,n.maxy-(n.maxy-n.miny)/2, n.minz,n.maxz
-    elseif n.dir==2
-        n.minx,n.maxx, n.miny,n.maxy, n.minz,n.maxz-(n.maxz-n.minz)/2
     else
-        error("bad direction!")
+        n.minx,n.maxx, n.miny,n.maxy, n.minz,n.maxz-(n.maxz-n.minz)/2
     end
 end
 
@@ -146,10 +140,8 @@ function get_minmax_high(n::Node)
         n.minx+(n.maxx-n.minx)/2,n.maxx, n.miny,n.maxy, n.minz,n.maxz
     elseif n.dir==1
         n.minx,n.maxx, n.miny+(n.maxy-n.miny)/2,n.maxy, n.minz,n.maxz
-    elseif n.dir==2
-        n.minx,n.maxx, n.miny,n.maxy, n.minz+(n.maxz-n.minz)/2,n.maxz
     else
-        error("bad direction!")
+        n.minx,n.maxx, n.miny,n.maxy, n.minz+(n.maxz-n.minz)/2,n.maxz
     end
 end
 
@@ -336,10 +328,8 @@ end
         splitx!(node.iix, node.fix, x, (node.minx+node.maxx)/2)
     elseif node.dir==1
         splity!(node.iix, node.fix, x, (node.miny+node.maxy)/2)
-    elseif node.dir==2
-        splitz!(node.iix, node.fix, x, (node.minz+node.maxz)/2)
     else
-        error("bad direction!")
+        splitz!(node.iix, node.fix, x, (node.minz+node.maxz)/2)
     end
 end
 
