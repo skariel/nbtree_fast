@@ -7,13 +7,22 @@ immutable Particle
 end
 
 function myrand()
-    x=-1
-    while x<0 || x>1
-        x=randn()^3+0.5
+    r=rand() #abs(randn()/5)^2
+    x=0.0
+    y=0.0
+    z=0.0
+    while true
+        x1 = 2*rand()-1
+        x2 = 2*rand()-1
+        dx2 = x1*x1+x2*x2
+        dx2 >= 1.0 && continue
+        s = 2*sqrt(1-dx2)*r
+        x = x1*s
+        y = x2*s
+        z = (1-2*dx2)*r
+        return x,y,z
     end
-    x
 end
 
 make_particles(N) =
-    [Particle(myrand(),myrand(),myrand(), 1.0, -1) for i in 1:N]
-
+    [Particle(myrand()..., 1.0, -1) for i in 1:N]
