@@ -7,7 +7,7 @@ immutable Particle
 end
 
 function myrand()
-    r=abs(randn()/5)^5
+    r=rand()^(1/2) #abs(randn()/5)^2
     x=0.0
     y=0.0
     z=0.0
@@ -26,4 +26,3 @@ end
 
 make_particles(N) =
     [Particle(myrand()..., 1.0, -1) for i in 1:N]
-

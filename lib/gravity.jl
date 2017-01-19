@@ -274,7 +274,7 @@ end
 const I_CC = 0
 const I_CS = 1
 const I_CB = 2
-function interact!(t::Tree, alpha::Float64, ax,ay,az)
+function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
     # stack1 -> 1st index
     # stack2 -> 2nd index (maybe particle)
     # stack3 -> interaction type (CC, CS, CB)
@@ -308,7 +308,7 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
                         dx = p2.x - p1.x
                         dy = p2.y - p1.y
                         dz = p2.z - p1.z
-                        dr2 = dx*dx + dy*dy + dz*dz
+                        dr2 = dx*dx + dy*dy + dz*dz + eps2
                         dr3 = dr2*sqrt(dr2)
                         fac1 = p2.m/dr3
                         fac2 = p1.m/dr3
@@ -354,7 +354,7 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
                 dx = p2.x - p1.x
                 dy = p2.y - p1.y
                 dz = p2.z - p1.z
-                dr2 = dx*dx + dy*dy + dz*dz
+                dr2 = dx*dx + dy*dy + dz*dz + eps2
                 dr3 = dr2*sqrt(dr2)
                 fac1 = p2.m/dr3
                 fac2 = p1.m/dr3
@@ -396,6 +396,9 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
         fac = (M/t.total_mass)^0.1
         @fastmath if (n1.l + l)/dr < alpha/fac
             # MAC succesful, execute interaction
+            dr2 += eps2
+            dr = sqrt(dr2)
+
             dr3 = dr2*dr
             dr5 = dr3*dr2
             dr7 = dr2*dr5
@@ -496,7 +499,7 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
                         dx = p2.x - p1.x
                         dy = p2.y - p1.y
                         dz = p2.z - p1.z
-                        dr2 = dx*dx + dy*dy + dz*dz
+                        dr2 = dx*dx + dy*dy + dz*dz + eps2
                         dr3 = dr2*sqrt(dr2)
                         fac1 = p2.m/dr3
                         fac2 = p1.m/dr3
@@ -548,7 +551,7 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az)
                 dx = p2.x - p1.x
                 dy = p2.y - p1.y
                 dz = p2.z - p1.z
-                dr2 = dx*dx + dy*dy + dz*dz
+                dr2 = dx*dx + dy*dy + dz*dz + eps2
                 dr3 = dr2*sqrt(dr2)
                 fac1 = p2.m/dr3
                 fac2 = p1.m/dr3
