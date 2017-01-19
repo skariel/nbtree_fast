@@ -7,7 +7,7 @@ immutable Particle
 end
 
 function myrand()
-    r=rand() #abs(randn()/5)^2
+    r=rand()^(1/2) #abs(randn()/5)^2
     x=0.0
     y=0.0
     z=0.0
