@@ -153,7 +153,7 @@ end
         dx2 = dx*dx
         dy2 = dy*dy
         dz2 = dz*dz
-        dr2 = dx2+dy2+dz2 + eps2
+        dr2 = dx2+dy2+dz2
         if n.l*n.l/dr2 > alpha2
             # open criterion failed, we should try to open this node
             if n.cix1 > 0
@@ -181,6 +181,7 @@ end
             continue
         end
         # open criterion succeeded
+        dr2 += eps2
         dr = sqrt(dr2)
         dr3 = dr2*dr
         fac = n.m/dr3
@@ -213,7 +214,7 @@ end
         dx = n.x - p.x
         dy = n.y - p.y
         dz = n.z - p.z
-        dr2 = dx*dx + dy*dy + dz*dz + eps2
+        dr2 = dx*dx + dy*dy + dz*dz
         na = n.m/dr2
         if na*n.l*n.l/dr2 > oa*alpha2
             # open criterion failed, we should try to open this node
@@ -242,6 +243,7 @@ end
             continue
         end
         # open criterion succeeded
+        dr2 += eps2
         fac = n.m/dr2/sqrt(dr2)
         ax += dx*fac
         ay += dy*fac
