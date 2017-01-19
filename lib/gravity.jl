@@ -393,7 +393,7 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
         dr2 = dx2 + dy2 + dz2
         dr = sqrt(dr2)
         M = n1.m+m
-        @fastmath fac = (M/t.total_mass)^0.1
+        @fastmath fac = (M/t.total_mass)^0.15
         @fastmath if (n1.l + l)/dr < alpha/fac
             # MAC succesful, execute interaction
             dr2 += eps2
