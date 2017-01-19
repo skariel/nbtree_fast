@@ -17,28 +17,32 @@ function get_acc(particles, ix, eps2)
     ax,ay,az
 end
 
-function perf(particles, ax, ay, az, N, eps2)
+function perf(particles, ax, N, eps2)
     ixs = randperm(length(t.particles))[1:N]
     rax = zeros(N)
     vax = ax[ixs]
-    ray = zeros(N)
-    vay = ay[ixs]
-    raz = zeros(N)
-    vaz = az[ixs]
     @threads for i in 1:N
         tax,tay,taz = get_acc(particles, ixs[i], eps2)
         rax[i] = tax;
-        ray[i] = tay;
-        raz[i] = taz;
     end
-    eex = abs((vax-rax)./rax*100)
-    eey = abs((vay-ray)./ray*100)
-    eez = abs((vaz-raz)./raz*100)
-    ix = round(Int64, N*0.99)
-    pex = sort(eex)[ix]
-    pey = sort(eey)[ix]
-    pez = sort(eez)[ix]
-    @show pex, pey, pez
+    ee = abs((vax-rax)./rax*100)
+    hx = linspace(-2,2,25)
+    mx = 0.5*(hx[2:end]+hx[1:(end-1)])
+    my = zeros(length(hx)-1)
+    for ei in ee
+        for i in 2:length(hx)
+            if log10(ei)<hx[i] && log10(ei)>hx[1]
+                my[i-1] += 1.0
+                break
+            end
+        end
+    end
+
+    ee50 = sort(ee)[round(Int64, N*0.5)]
+    ee90 = sort(ee)[round(Int64, N*0.9)]
+    ee95 = sort(ee)[round(Int64, N*0.9)]
+    ee99 = sort(ee)[round(Int64, N*0.99)]
+    mx,my, ee50,ee90,ee95,ee99, mean(log10(ee)), std(log10(ee))
 end
 
 function test_in_cell_mass(t::Tree)
