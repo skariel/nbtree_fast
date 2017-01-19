@@ -289,7 +289,7 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
     p1 = Particle(0.0,0.0,0.0,0.0,-1)
     p2 = p1
     e = t.exps[1]
-    @inbounds while six > 0
+    @fastmath @inbounds while six > 0
         ix1 = t.stack1[six]
         ix2 = t.stack2[six]
         itype = t.stack3[six]
@@ -393,7 +393,7 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
         dr2 = dx2 + dy2 + dz2
         dr = sqrt(dr2)
         M = n1.m+m
-        fac = (M/t.total_mass)^0.1
+        @fastmath fac = (M/t.total_mass)^0.1
         @fastmath if (n1.l + l)/dr < alpha/fac
             # MAC succesful, execute interaction
             dr2 += eps2
