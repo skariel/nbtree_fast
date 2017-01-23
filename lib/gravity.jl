@@ -579,7 +579,7 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
             t.stack3[six] = I_CB
         end
 
-        # thats it, loop for next interaciton!
+        # thats it, loop for next interaction!
     end
 end
 
