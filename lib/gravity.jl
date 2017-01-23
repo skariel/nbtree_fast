@@ -606,7 +606,7 @@ function collect!(t::Tree, ax::Vector{Float64},ay::Vector{Float64},az::Vector{Fl
 end
 
 function deliver!(t::Tree, ax::Vector{Float64},ay::Vector{Float64},az::Vector{Float64})
-    @fastmath @inbounds @simd for i in 1:length(t.particles)
+    @threads @fastmath @inbounds @simd for i in 1:length(t.particles)
         p = t.particles[i]
         n = t.nodes[p.pix]
         e = t.exps[p.pix]
