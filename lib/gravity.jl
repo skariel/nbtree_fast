@@ -602,18 +602,16 @@ function collect!(t::Tree, ax::Vector{Float64},ay::Vector{Float64},az::Vector{Fl
             _n = t.nodes[n.cix2]
             t.exps[n.cix2] = add_expansion_to_n1(_n,_e, n,e)
         end
+        if n.cix1<0 && n.cix2<0
+            for i in n.iix:n.fix
+                p = t.particles[i]
+                dax,day,daz = get_accel_from_node(n, e, p.x,p.y,p.z)
+                ax[i] += dax
+                ay[i] += day
+                az[i] += daz
+            end
+        end
     end
 end
 
-function deliver!(t::Tree, ax::Vector{Float64},ay::Vector{Float64},az::Vector{Float64})
-    @threads @fastmath @inbounds @simd for i in 1:length(t.particles)
-        p = t.particles[i]
-        n = t.nodes[p.pix]
-        e = t.exps[p.pix]
-        dax,day,daz = get_accel_from_node(n, e, p.x,p.y,p.z)
-        ax[i] += dax
-        ay[i] += day
-        az[i] += daz
-    end
-end
 
