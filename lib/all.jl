@@ -1,3 +1,5 @@
+using Base.Threads
+
 set_zero_subnormals(true)
 
 include("particles.jl")

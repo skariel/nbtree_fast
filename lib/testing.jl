@@ -1,5 +1,4 @@
 using Base.Test
-using Base.Threads
 
 function get_acc(particles, ix, eps2)
     ax=0.0
@@ -18,16 +17,27 @@ function get_acc(particles, ix, eps2)
     ax,ay,az
 end
 
-function perf(particles, ax, N, eps2)
+function perf(particles, ax,ay,az, N, eps2)
     ixs = randperm(length(t.particles))[1:N]
     rax = zeros(N)
+    ray = zeros(N)
+    raz = zeros(N)
     vax = ax[ixs]
+    vay = ay[ixs]
+    vaz = az[ixs]
     @threads for i in 1:N
         tax,tay,taz = get_acc(particles, ixs[i], eps2)
         rax[i] = tax;
+        ray[i] = tay;
+        raz[i] = taz;
     end
-    ee = abs((vax-rax)./rax*100)
-    hx = linspace(-2,2,25)
+    dax = vax-rax
+    day = vay-ray
+    daz = vaz-raz
+    da = sqrt(dax.^2+day.^2+daz.^2)
+    a = sqrt(rax.^2+ray.^2+raz.^2)
+    ee = abs(da./a.*100)
+    hx = linspace(-2,2,35)
     mx = 0.5*(hx[2:end]+hx[1:(end-1)])
     my = zeros(length(hx)-1)
     for ei in ee
