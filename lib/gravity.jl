@@ -609,7 +609,7 @@ function collect!(t::Tree, ax::Vector{Float64},ay::Vector{Float64},az::Vector{Fl
             t.exps[n.cix2] = add_expansion_to_n1(_n,_e, n,e)
         end
         if n.cix1<0 && n.cix2<0
-            for i in n.iix:n.fix
+            @simd for i in n.iix:n.fix
                 p = t.particles[i]
                 dax,day,daz = get_accel_from_node(n, e, p.x,p.y,p.z)
                 ax[i] += dax
