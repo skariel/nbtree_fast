@@ -136,20 +136,23 @@ end
     dx = n1.x-n2.x
     dy = n1.y-n2.y
     dz = n1.z-n2.z
-    dx2 = dx*dx
-    dy2 = dy*dy
-    dz2 = dz*dz
+    dx2 = dx*dx/2.0
+    dy2 = dy*dy/2.0
+    dz2 = dz*dz/2.0
+    dxdy = dx*dy
+    dxdz = dx*dz
+    dydz = dy*dz
 
     new_px = e2.px+e1.px +
         e2.pxx  * dx    +
-        e2.pxxx * dx2/2 +
-        e2.pxxy * dx*dy +
-        e2.pxxz * dx*dz +
+        e2.pxxx * dx2 +
+        e2.pxxy * dxdy +
+        e2.pxxz * dxdz +
         e2.pxy  * dy    +
-        e2.pxyy * dy2/2 +
-        e2.pxyz * dy*dz + 
+        e2.pxyy * dy2 +
+        e2.pxyz * dydz + 
         e2.pxz  * dz    +
-        e2.pxzz * dz2/2
+        e2.pxzz * dz2
     new_pxx = e2.pxx+e1.pxx    +
         e2.pxxx * dx    +
         e2.pxxy * dy    +
@@ -169,15 +172,15 @@ end
         e2.pxzz * dz
     new_pxzz = e2.pxzz+e1.pxzz
     new_py = e2.py+e1.py      +
-        e2.pxxy * dx2/2 +
+        e2.pxxy * dx2 +
         e2.pxy  * dx    +
-        e2.pxyy * dx*dy +
-        e2.pxyz * dx*dz +
+        e2.pxyy * dxdy +
+        e2.pxyz * dxdz +
         e2.pyy  * dy    + 
-        e2.pyyy * dy2/2 +
-        e2.pyyz * dy*dz +
+        e2.pyyy * dy2 +
+        e2.pyyz * dydz +
         e2.pyz  * dz    +
-        e2.pyzz * dz2/2
+        e2.pyzz * dz2
     new_pyy = e2.pyy+e1.pyy    +
         e2.pxyy * dx    +
         e2.pyyy * dy    +
@@ -190,15 +193,15 @@ end
         e2.pyzz * dz
     new_pyzz = e2.pyzz+e1.pyzz
     new_pz = e2.pz+e1.pz      +
-        e2.pxxz * dx2/2 +
-        e2.pxyz * dx*dy +
+        e2.pxxz * dx2 +
+        e2.pxyz * dxdy +
         e2.pxz  * dx    +
-        e2.pxzz * dx*dz +
-        e2.pyyz * dy2/2 +
+        e2.pxzz * dxdz +
+        e2.pyyz * dy2 +
         e2.pyz  * dy    +
-        e2.pyzz * dy*dz +
+        e2.pyzz * dydz +
         e2.pzz  * dz    +
-        e2.pzzz * dz2/2
+        e2.pzzz * dz2
     new_pzz = e2.pzz+e1.pzz    +
         e2.pxzz * dx    +
         e2.pyzz * dy    +
@@ -231,42 +234,45 @@ end
     dx = x-n.x
     dy = y-n.y
     dz = z-n.z
-    dx2 = dx*dx
-    dy2 = dy*dy
-    dz2 = dz*dz
+    dx2 = dx*dx/2.0
+    dy2 = dy*dy/2.0
+    dz2 = dz*dz/2.0
+    dxdy = dx*dy
+    dxdz = dx*dz
+    dydz = dy*dz
 
     ax = e.px +
         e.pxx*dx +
-        e.pxxx*dx2/2 +
-        e.pxxy*dx*dy +
-        e.pxxz*dx*dz +
+        e.pxxx*dx2 +
+        e.pxxy*dxdy +
+        e.pxxz*dxdz +
         e.pxy*dy +
-        e.pxyy*dy2/2 +
-        e.pxyz*dy*dz +
+        e.pxyy*dy2 +
+        e.pxyz*dydz +
         e.pxz*dz +
-        e.pxzz*dz2/2
+        e.pxzz*dz2
 
     ay = e.py +
-        e.pxxy*dx2/2 +
+        e.pxxy*dx2 +
         e.pxy*dx +
-        e.pxyy*dx*dy +
-        e.pxyz*dx*dz +
+        e.pxyy*dxdy +
+        e.pxyz*dxdz +
         e.pyy*dy +
-        e.pyyy*dy2/2 +
-        e.pyyz*dy*dz +
+        e.pyyy*dy2 +
+        e.pyyz*dydz +
         e.pyz*dz +
-        e.pyzz*dz2/2
+        e.pyzz*dz2
     
     az = e.pz +
-        e.pxxz*dx2/2 +
-        e.pxyz*dx*dy +
+        e.pxxz*dx2 +
+        e.pxyz*dxdy +
         e.pxz*dx +
-        e.pxzz*dx*dz +
-        e.pyyz*dy2/2 +
+        e.pxzz*dxdz +
+        e.pyyz*dy2 +
         e.pyz*dy +
-        e.pyzz*dy*dz +
+        e.pyzz*dydz +
         e.pzz*dz +
-        e.pzzz*dz2/2
+        e.pzzz*dz2
 
     ax, ay, az
 end
@@ -303,7 +309,7 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
                 # perform direct summation
                 for i1 in n.iix:(n.fix-1)
                     p1 = t.particles[i1]
-                    @fastmath @inbounds @simd for i2 in (i1+1):n.fix
+                    @inbounds @simd for i2 in (i1+1):n.fix
                         p2 = t.particles[i2]
                         dx = p2.x - p1.x
                         dy = p2.y - p1.y
@@ -349,7 +355,7 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
         if itype==I_CB && nbody1<16
             # just do direct summation
             p2 = t.particles[ix2]
-            @fastmath @inbounds @simd for i1 in n1.iix:n1.fix
+            @inbounds @simd for i1 in n1.iix:n1.fix
                 p1 = t.particles[i1]
                 dx = p2.x - p1.x
                 dy = p2.y - p1.y
@@ -393,8 +399,8 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
         dr2 = dx2 + dy2 + dz2
         dr = sqrt(dr2)
         M = n1.m+m
-        @fastmath fac = (M/t.total_mass)^0.15
-        @fastmath if (n1.l + l)/dr < alpha/fac
+        fac = (M/t.total_mass)^0.15
+        if (n1.l + l)/dr < alpha/fac
             # MAC succesful, execute interaction
             dr2 += eps2
             dr = sqrt(dr2)
@@ -494,7 +500,7 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
             if nbody1*nbody2 < 64
                 @inbounds for i1 in n1.iix:n1.fix
                     p1 = t.particles[i1]
-                    @fastmath @inbounds @simd for i2 in n.iix:n.fix
+                    @inbounds @simd for i2 in n.iix:n.fix
                         p2 = t.particles[i2]
                         dx = p2.x - p1.x
                         dy = p2.y - p1.y
@@ -546,7 +552,7 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
         # test for postconditions for direct summation
         if nbody1<64 || (n1.cix1<0 && n1.cix2<0)
             p2 = t.particles[ix2]
-            @fastmath @inbounds @simd for i1 in n1.iix:n1.fix
+            @inbounds @simd for i1 in n1.iix:n1.fix
                 p1 = t.particles[i1]
                 dx = p2.x - p1.x
                 dy = p2.y - p1.y
