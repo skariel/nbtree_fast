@@ -68,8 +68,7 @@ type Tree
     exps::Vector{NodeExp}
     particles::Vector{Particle}
     stack1::Vector{Int64}
-    stack2::Vector{Int64}
-    stack3::Vector{Int64}
+    stack::AKStack
     num_nodes_used::Int64
     S::Int64                 # maximum number of particles per node
 end
@@ -79,18 +78,14 @@ function Tree(particles, S)
     nodes = Node[Node() for i in 1:nodec]
     exps = NodeExp[NodeExp() for i in 1:nodec]
     exp_ixs = -ones(Int64,nodec)
-    stack1 = zeros(Int64,10000)
-    stack2 = zeros(Int64,10000)
-    stack3 = zeros(Int64,10000)
     num_nodes_used = 0
     Tree(
         sum(p.m for p in particles),
         nodes,
         exps,
         particles,
-        stack1,
-        stack2,
-        stack3,
+        zeros(Int64, 10000),
+        AKStack(10000),
         num_nodes_used,
         S)
 end

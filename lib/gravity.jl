@@ -286,20 +286,19 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
     # stack3 -> interaction type (CC, CS, CB)
 
     # pushing root into the stack_ix
-    six = 1
-    t.stack1[six]=1
-    t.stack2[six]=1
-    t.stack3[six]=I_CS # root is a self interaction
+    empty!(t.stack)
+    push!(t.stack, 1,1,I_CS)
     n = t.nodes[1]
     n1 = n
     p1 = Particle(0.0,0.0,0.0,0.0,-1)
     p2 = p1
     e = t.exps[1]
-    @fastmath @inbounds while six > 0
-        ix1 = t.stack1[six]
-        ix2 = t.stack2[six]
-        itype = t.stack3[six]
-        six -= 1
+    ix1=0;ix2=0;itype=0;pop_was_good=false
+    @fastmath @inbounds while true
+        ix1,ix2,itype,pop_was_good = try_pop!(t.stack)
+        if !pop_was_good
+            break
+        end
         if itype==I_CS
             # we have a self interaction
             n = t.nodes[ix1]
@@ -330,22 +329,13 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
             end
             # split self interactions
             if n.cix1>0 && n.cix2>0
-                six += 1
-                t.stack1[six] = n.cix1
-                t.stack2[six] = n.cix2
-                t.stack3[six] = I_CC
+                push!(t.stack, n.cix1,n.cix2,I_CC)
             end
             if n.cix1>0
-                six += 1
-                t.stack1[six] = n.cix1
-                t.stack2[six] = n.cix1
-                t.stack3[six] = I_CS
+                push!(t.stack, n.cix1,n.cix1,I_CS)
             end
             if n.cix2>0
-                six += 1
-                t.stack1[six] = n.cix2
-                t.stack2[six] = n.cix2
-                t.stack3[six] = I_CS
+                push!(t.stack, n.cix2,n.cix2,I_CS)
             end
             continue
         end
@@ -525,24 +515,15 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
                 ix1,ix2 = ix2,ix1
             end
             if n1.cix1>0
-                six += 1
-                t.stack1[six] = n1.cix1
-                t.stack2[six] = ix2
-                t.stack3[six] = I_CC
+                push!(t.stack, n1.cix1,ix2,I_CC)
             end
             if n1.cix2>0
-                six += 1
-                t.stack1[six] = n1.cix2
-                t.stack2[six] = ix2
-                t.stack3[six] = I_CC
+                push!(t.stack, n1.cix2,ix2,I_CC)
             end
             if n1.cix1<0 && n1.cix2<0
                 # splitting into particles
                 @inbounds for i1 in n1.iix:n1.fix
-                    six += 1
-                    t.stack1[six] = ix2
-                    t.stack2[six] = i1
-                    t.stack3[six] = I_CB
+                     push!(t.stack, ix2,i1,I_CB)
                 end
             end
             continue
@@ -573,16 +554,10 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
 
         # cannot execute interaction, split cell
         if n1.cix1>0
-            six += 1
-            t.stack1[six] = n1.cix1
-            t.stack2[six] = ix2
-            t.stack3[six] = I_CB
+            push!(t.stack, n1.cix1,ix2,I_CB)
         end
         if n1.cix2>0
-            six += 1
-            t.stack1[six] = n1.cix2
-            t.stack2[six] = ix2
-            t.stack3[six] = I_CB
+            push!(t.stack, n1.cix2,ix2,I_CB)
         end
 
         # thats it, loop for next interaction!
