@@ -484,3 +484,23 @@ function test_exp()
     @show pxy
 end
 
+function logg(s, mode="a")
+    fn = "log_"*string(threadid())*".txt"
+    open(fn,mode) do f
+        write(f, string(s)*"\n")
+    end
+    nothing
+end
+
+
+function test_akstack()
+    s = AKStack(1000000)
+    @threads for i in 1:1000000
+        if rand()<0.5
+            push!(s, 1,2,3)
+        else
+            try_pop!(s)
+        end
+    end
+    s
+end

@@ -288,279 +288,303 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
     # pushing root into the stack_ix
     empty!(t.stack)
     push!(t.stack, 1,1,I_CS)
-    n = t.nodes[1]
-    n1 = n
-    p1 = Particle(0.0,0.0,0.0,0.0,-1)
-    p2 = p1
-    e = t.exps[1]
-    ix1=0;ix2=0;itype=0;pop_was_good=false
-    @fastmath @inbounds while true
-        ix1,ix2,itype,pop_was_good = try_pop!(t.stack)
-        if !pop_was_good
-            break
-        end
-        if itype==I_CS
-            # we have a self interaction
-            n = t.nodes[ix1]
-            pnum = n.fix-n.iix+1
-            if (pnum <= 32) || (n.cix1<0 && n.cix2<0)
-                # its either a leaf or a small particle count
-                # perform direct summation
-                for i1 in n.iix:(n.fix-1)
-                    p1 = t.particles[i1]
-                    @inbounds @simd for i2 in (i1+1):n.fix
-                        p2 = t.particles[i2]
-                        dx = p2.x - p1.x
-                        dy = p2.y - p1.y
-                        dz = p2.z - p1.z
-                        dr2 = dx*dx + dy*dy + dz*dz + eps2
-                        dr3 = dr2*sqrt(dr2)
-                        fac1 = p2.m/dr3
-                        fac2 = p1.m/dr3
-                        ax[i1] += dx*fac1
-                        ay[i1] += dy*fac1
-                        az[i1] += dz*fac1
-                        ax[i2] -= dx*fac2
-                        ay[i2] -= dy*fac2
-                        az[i2] -= dz*fac2
-                    end            
-                end                
+
+    num_working_threads = Atomic{Int64}(0)
+    th = string(hash(time()))
+
+    @threads for thi in 1:NTH
+        logg("time is: "*th,"w")
+        atomic_add!(num_working_threads, 1)
+        is_working_thread = true
+
+        n = t.nodes[1]
+        n1 = n
+        p1 = Particle(0.0,0.0,0.0,0.0,-1)
+        p2 = p1
+        e = t.exps[1]
+        ix1=0;ix2=0;itype=0;pop_was_good=false
+        tic()
+        @fastmath @inbounds while true
+            ix1,ix2,itype,pop_was_good = try_pop!(t.stack)
+            if !pop_was_good && !is_working_thread && num_working_threads[]==0
+                break
+            end
+            if !pop_was_good && !is_working_thread && num_working_threads[]>0
                 continue
             end
-            # split self interactions
-            if n.cix1>0 && n.cix2>0
-                push!(t.stack, n.cix1,n.cix2,I_CC)
+            if !pop_was_good && is_working_thread && num_working_threads[]>0
+                is_working_thread = false
+                atomic_add!(num_working_threads, -1)
+                continue
             end
-            if n.cix1>0
-                push!(t.stack, n.cix1,n.cix1,I_CS)
+            if pop_was_good && !is_working_thread
+                is_working_thread = true
+                atomic_add!(num_working_threads, 1)
             end
-            if n.cix2>0
-                push!(t.stack, n.cix2,n.cix2,I_CS)
-            end
-            continue
-        end
-
-        n1 = t.nodes[ix1]
-        nbody1 = n1.fix-n1.iix+1
-        if itype==I_CB && nbody1<16
-            # just do direct summation
-            p2 = t.particles[ix2]
-            @inbounds @simd for i1 in n1.iix:n1.fix
-                p1 = t.particles[i1]
-                dx = p2.x - p1.x
-                dy = p2.y - p1.y
-                dz = p2.z - p1.z
-                dr2 = dx*dx + dy*dy + dz*dz + eps2
-                dr3 = dr2*sqrt(dr2)
-                fac1 = p2.m/dr3
-                fac2 = p1.m/dr3
-                ax[i1] += dx*fac1
-                ay[i1] += dy*fac1
-                az[i1] += dz*fac1
-                ax[ix2] -= dx*fac2
-                ay[ix2] -= dy*fac2
-                az[ix2] -= dz*fac2
-            end            
-            continue
-        end
-
-        # Do a MAC test
-        x=0.0; y=0.0; z=0.0; m=0.0; l=0.0;
-        if itype==I_CB
-            p2 = t.particles[ix2]
-            x=p2.x
-            y=p2.y
-            z=p2.z
-            m=p2.m
-        else
-            n = t.nodes[ix2]
-            x=n.x
-            y=n.y
-            z=n.z
-            m=n.m
-            l=n.l
-        end                    
-        dx = x-n1.x
-        dy = y-n1.y
-        dz = z-n1.z
-        dx2 = dx*dx
-        dy2 = dy*dy
-        dz2 = dz*dz
-        dr2 = dx2 + dy2 + dz2
-        dr = sqrt(dr2)
-        M = n1.m+m
-        fac = (M/t.total_mass)^0.15
-        if (n1.l + l)/dr < alpha/fac
-            # MAC succesful, execute interaction
-            dr2 += eps2
-            dr = sqrt(dr2)
-
-            dr3 = dr2*dr
-            dr5 = dr3*dr2
-            dr7 = dr2*dr5
-            dr73 = dr7/3
-            dx3 = dx2*dx
-            dy3 = dy2*dy
-            dz3 = dz2*dz
-
-            px = dx/dr3
-            py = dy/dr3
-            pz = dz/dr3
-
-            pxx = (3*dx2-dr2)/dr5
-            pyy = (3*dy2-dr2)/dr5
-            pzz = (3*dz2-dr2)/dr5
-
-            pxy = 3*dx*dy/dr5
-            pxz = 3*dx*dz/dr5
-            pyz = 3*dy*dz/dr5
-
-            pxxx = dx*(5*dx2-3*dr2)/dr73
-            pyyy = dy*(5*dy2-3*dr2)/dr73
-            pzzz = dz*(5*dz2-3*dr2)/dr73
-
-            pxxy = dy*(5*dx2-dr2)/dr73
-            pxxz = dz*(5*dx2-dr2)/dr73
-            pyyz = dz*(5*dy2-dr2)/dr73
-            pyzz = dy*(5*dz2-dr2)/dr73
-            pxyy = dx*(5*dy2-dr2)/dr73
-            pxzz = dx*(5*dz2-dr2)/dr73
-
-            pxyz = 15*dx*dy*dz/dr7
-
-            if itype==I_CB
-                fac = -n1.m/dr3
-                ax[ix2] += dx*fac
-                ay[ix2] += dy*fac
-                az[ix2] += dz*fac                
-            else
-                e = t.exps[ix2]
-                t.exps[ix2] = NodeExp(
-                    e.px-n1.m*px,
-                    e.pxx+n1.m*pxx,
-                    e.pxxx-n1.m*pxxx,
-                    e.pxxy-n1.m*pxxy,
-                    e.pxxz-n1.m*pxxz,
-                    e.pxy+n1.m*pxy,
-                    e.pxyy-n1.m*pxyy,
-                    e.pxyz-n1.m*pxyz,
-                    e.pxz+n1.m*pxz,
-                    e.pxzz-n1.m*pxzz,
-                    e.py-n1.m*py,
-                    e.pyy+n1.m*pyy,
-                    e.pyyy-n1.m*pyyy,
-                    e.pyyz-n1.m*pyyz,
-                    e.pyz+n1.m*pyz,
-                    e.pyzz-n1.m*pyzz,
-                    e.pz-n1.m*pz,
-                    e.pzz+n1.m*pzz,
-                    e.pzzz-n1.m*pzzz,
-                )
-            end
-            e = t.exps[ix1]
-            t.exps[ix1] = NodeExp(
-                e.px+m*px,
-                e.pxx+m*pxx,
-                e.pxxx+m*pxxx,
-                e.pxxy+m*pxxy,
-                e.pxxz+m*pxxz,
-                e.pxy+m*pxy,
-                e.pxyy+m*pxyy,
-                e.pxyz+m*pxyz,
-                e.pxz+m*pxz,
-                e.pxzz+m*pxzz,
-                e.py+m*py,
-                e.pyy+m*pyy,
-                e.pyyy+m*pyyy,
-                e.pyyz+m*pyyz,
-                e.pyz+m*pyz,
-                e.pyzz+m*pyzz,
-                e.pz+m*pz,
-                e.pzz+m*pzz,
-                e.pzzz+m*pzzz,
-            ) 
-            continue
-        end
-
-        # failed MAC
-
-        if itype==I_CC
-            nbody2 = n.fix-n.iix+1
-            # postconditions to direct summation
-            if nbody1*nbody2 < 64
-                @inbounds for i1 in n1.iix:n1.fix
-                    p1 = t.particles[i1]
-                    @inbounds @simd for i2 in n.iix:n.fix
-                        p2 = t.particles[i2]
-                        dx = p2.x - p1.x
-                        dy = p2.y - p1.y
-                        dz = p2.z - p1.z
-                        dr2 = dx*dx + dy*dy + dz*dz + eps2
-                        dr3 = dr2*sqrt(dr2)
-                        fac1 = p2.m/dr3
-                        fac2 = p1.m/dr3
-                        ax[i1] += dx*fac1
-                        ay[i1] += dy*fac1
-                        az[i1] += dz*fac1
-                        ax[i2] -= dx*fac2
-                        ay[i2] -= dy*fac2
-                        az[i2] -= dz*fac2
-                    end            
+            if itype==I_CS
+                # we have a self interaction
+                n = t.nodes[ix1]
+                pnum = n.fix-n.iix+1
+                if (pnum <= 32) || (n.cix1<0 && n.cix2<0)
+                    # its either a leaf or a small particle count
+                    # perform direct summation
+                    for i1 in n.iix:(n.fix-1)
+                        p1 = t.particles[i1]
+                        @simd for i2 in (i1+1):n.fix
+                            p2 = t.particles[i2]
+                            dx = p2.x - p1.x
+                            dy = p2.y - p1.y
+                            dz = p2.z - p1.z
+                            dr2 = dx*dx + dy*dy + dz*dz + eps2
+                            dr3 = dr2*sqrt(dr2)
+                            fac1 = p2.m/dr3
+                            fac2 = p1.m/dr3
+                            ax[i1] += dx*fac1
+                            ay[i1] += dy*fac1
+                            az[i1] += dz*fac1
+                            ax[i2] -= dx*fac2
+                            ay[i2] -= dy*fac2
+                            az[i2] -= dz*fac2
+                        end            
+                    end                
+                    continue
+                end
+                # split self interactions
+                if n.cix1>0 && n.cix2>0
+                    push!(t.stack, n.cix1,n.cix2,I_CC)
+                end
+                if n.cix1>0
+                    push!(t.stack, n.cix1,n.cix1,I_CS)
+                end
+                if n.cix2>0
+                    push!(t.stack, n.cix2,n.cix2,I_CS)
                 end
                 continue
             end
-            # the interaction cannot be executed, splitting the bigger node
-            if n.l > n1.l
-                n1 = n
-                ix1,ix2 = ix2,ix1
+
+            n1 = t.nodes[ix1]
+            nbody1 = n1.fix-n1.iix+1
+            if itype==I_CB && nbody1<16
+                # just do direct summation
+                p2 = t.particles[ix2]
+                @simd for i1 in n1.iix:n1.fix
+                    p1 = t.particles[i1]
+                    dx = p2.x - p1.x
+                    dy = p2.y - p1.y
+                    dz = p2.z - p1.z
+                    dr2 = dx*dx + dy*dy + dz*dz + eps2
+                    dr3 = dr2*sqrt(dr2)
+                    fac1 = p2.m/dr3
+                    fac2 = p1.m/dr3
+                    ax[i1] += dx*fac1
+                    ay[i1] += dy*fac1
+                    az[i1] += dz*fac1
+                    ax[ix2] -= dx*fac2
+                    ay[ix2] -= dy*fac2
+                    az[ix2] -= dz*fac2
+                end            
+                continue
             end
+
+            # Do a MAC test
+            x=0.0; y=0.0; z=0.0; m=0.0; l=0.0;
+            if itype==I_CB
+                p2 = t.particles[ix2]
+                x=p2.x
+                y=p2.y
+                z=p2.z
+                m=p2.m
+            else
+                n = t.nodes[ix2]
+                x=n.x
+                y=n.y
+                z=n.z
+                m=n.m
+                l=n.l
+            end                    
+            dx = x-n1.x
+            dy = y-n1.y
+            dz = z-n1.z
+            dx2 = dx*dx
+            dy2 = dy*dy
+            dz2 = dz*dz
+            dr2 = dx2 + dy2 + dz2
+            dr = sqrt(dr2)
+            M = n1.m+m
+            fac = (M/t.total_mass)^0.15
+            if (n1.l + l)/dr < alpha/fac
+                # MAC succesful, execute interaction
+                dr2 += eps2
+                dr = sqrt(dr2)
+
+                dr3 = dr2*dr
+                dr5 = dr3*dr2
+                dr7 = dr2*dr5
+                dr73 = dr7/3
+                dx3 = dx2*dx
+                dy3 = dy2*dy
+                dz3 = dz2*dz
+
+                px = dx/dr3
+                py = dy/dr3
+                pz = dz/dr3
+
+                pxx = (3*dx2-dr2)/dr5
+                pyy = (3*dy2-dr2)/dr5
+                pzz = (3*dz2-dr2)/dr5
+
+                pxy = 3*dx*dy/dr5
+                pxz = 3*dx*dz/dr5
+                pyz = 3*dy*dz/dr5
+
+                pxxx = dx*(5*dx2-3*dr2)/dr73
+                pyyy = dy*(5*dy2-3*dr2)/dr73
+                pzzz = dz*(5*dz2-3*dr2)/dr73
+
+                pxxy = dy*(5*dx2-dr2)/dr73
+                pxxz = dz*(5*dx2-dr2)/dr73
+                pyyz = dz*(5*dy2-dr2)/dr73
+                pyzz = dy*(5*dz2-dr2)/dr73
+                pxyy = dx*(5*dy2-dr2)/dr73
+                pxzz = dx*(5*dz2-dr2)/dr73
+
+                pxyz = 15*dx*dy*dz/dr7
+
+                if itype==I_CB
+                    fac = -n1.m/dr3
+                    ax[ix2] += dx*fac
+                    ay[ix2] += dy*fac
+                    az[ix2] += dz*fac                
+                else
+                    e = t.exps[ix2]
+                    t.exps[ix2] = NodeExp(
+                        e.px-n1.m*px,
+                        e.pxx+n1.m*pxx,
+                        e.pxxx-n1.m*pxxx,
+                        e.pxxy-n1.m*pxxy,
+                        e.pxxz-n1.m*pxxz,
+                        e.pxy+n1.m*pxy,
+                        e.pxyy-n1.m*pxyy,
+                        e.pxyz-n1.m*pxyz,
+                        e.pxz+n1.m*pxz,
+                        e.pxzz-n1.m*pxzz,
+                        e.py-n1.m*py,
+                        e.pyy+n1.m*pyy,
+                        e.pyyy-n1.m*pyyy,
+                        e.pyyz-n1.m*pyyz,
+                        e.pyz+n1.m*pyz,
+                        e.pyzz-n1.m*pyzz,
+                        e.pz-n1.m*pz,
+                        e.pzz+n1.m*pzz,
+                        e.pzzz-n1.m*pzzz,
+                    )
+                end
+                e = t.exps[ix1]
+                t.exps[ix1] = NodeExp(
+                    e.px+m*px,
+                    e.pxx+m*pxx,
+                    e.pxxx+m*pxxx,
+                    e.pxxy+m*pxxy,
+                    e.pxxz+m*pxxz,
+                    e.pxy+m*pxy,
+                    e.pxyy+m*pxyy,
+                    e.pxyz+m*pxyz,
+                    e.pxz+m*pxz,
+                    e.pxzz+m*pxzz,
+                    e.py+m*py,
+                    e.pyy+m*pyy,
+                    e.pyyy+m*pyyy,
+                    e.pyyz+m*pyyz,
+                    e.pyz+m*pyz,
+                    e.pyzz+m*pyzz,
+                    e.pz+m*pz,
+                    e.pzz+m*pzz,
+                    e.pzzz+m*pzzz,
+                ) 
+                continue
+            end
+
+            # failed MAC
+
+            if itype==I_CC
+                nbody2 = n.fix-n.iix+1
+                # postconditions to direct summation
+                if nbody1*nbody2 < 64
+                    for i1 in n1.iix:n1.fix
+                        p1 = t.particles[i1]
+                        @simd for i2 in n.iix:n.fix
+                            p2 = t.particles[i2]
+                            dx = p2.x - p1.x
+                            dy = p2.y - p1.y
+                            dz = p2.z - p1.z
+                            dr2 = dx*dx + dy*dy + dz*dz + eps2
+                            dr3 = dr2*sqrt(dr2)
+                            fac1 = p2.m/dr3
+                            fac2 = p1.m/dr3
+                            ax[i1] += dx*fac1
+                            ay[i1] += dy*fac1
+                            az[i1] += dz*fac1
+                            ax[i2] -= dx*fac2
+                            ay[i2] -= dy*fac2
+                            az[i2] -= dz*fac2
+                        end            
+                    end
+                    continue
+                end
+                # the interaction cannot be executed, splitting the bigger node
+                if n.l > n1.l
+                    n1 = n
+                    ix1,ix2 = ix2,ix1
+                end
+                if n1.cix1>0
+                    push!(t.stack, n1.cix1,ix2,I_CC)
+                end
+                if n1.cix2>0
+                    push!(t.stack, n1.cix2,ix2,I_CC)
+                end
+                if n1.cix1<0 && n1.cix2<0
+                    # splitting into particles
+                    for i1 in n1.iix:n1.fix
+                        push!(t.stack, ix2,i1,I_CB)
+                    end
+                end
+                continue
+            end
+            
+            # we have a c-b interaction
+            # test for postconditions for direct summation
+            if nbody1<64 || (n1.cix1<0 && n1.cix2<0)
+                p2 = t.particles[ix2]
+                @simd for i1 in n1.iix:n1.fix
+                    p1 = t.particles[i1]
+                    dx = p2.x - p1.x
+                    dy = p2.y - p1.y
+                    dz = p2.z - p1.z
+                    dr2 = dx*dx + dy*dy + dz*dz + eps2
+                    dr3 = dr2*sqrt(dr2)
+                    fac1 = p2.m/dr3
+                    fac2 = p1.m/dr3
+                    ax[i1] += dx*fac1
+                    ay[i1] += dy*fac1
+                    az[i1] += dz*fac1
+                    ax[ix2] -= dx*fac2
+                    ay[ix2] -= dy*fac2
+                    az[ix2] -= dz*fac2
+                end            
+                continue
+            end
+
+            # cannot execute interaction, split cell
             if n1.cix1>0
-                push!(t.stack, n1.cix1,ix2,I_CC)
+                push!(t.stack, n1.cix1,ix2,I_CB)
             end
             if n1.cix2>0
-                push!(t.stack, n1.cix2,ix2,I_CC)
+                push!(t.stack, n1.cix2,ix2,I_CB)
             end
-            if n1.cix1<0 && n1.cix2<0
-                # splitting into particles
-                @inbounds for i1 in n1.iix:n1.fix
-                     push!(t.stack, ix2,i1,I_CB)
-                end
-            end
-            continue
-        end
-        
-        # we have a c-b interaction
-        # test for postconditions for direct summation
-        if nbody1<64 || (n1.cix1<0 && n1.cix2<0)
-            p2 = t.particles[ix2]
-            @inbounds @simd for i1 in n1.iix:n1.fix
-                p1 = t.particles[i1]
-                dx = p2.x - p1.x
-                dy = p2.y - p1.y
-                dz = p2.z - p1.z
-                dr2 = dx*dx + dy*dy + dz*dz + eps2
-                dr3 = dr2*sqrt(dr2)
-                fac1 = p2.m/dr3
-                fac2 = p1.m/dr3
-                ax[i1] += dx*fac1
-                ay[i1] += dy*fac1
-                az[i1] += dz*fac1
-                ax[ix2] -= dx*fac2
-                ay[ix2] -= dy*fac2
-                az[ix2] -= dz*fac2
-            end            
-            continue
-        end
 
-        # cannot execute interaction, split cell
-        if n1.cix1>0
-            push!(t.stack, n1.cix1,ix2,I_CB)
+            # thats it, loop for next interaction!
         end
-        if n1.cix2>0
-            push!(t.stack, n1.cix2,ix2,I_CB)
-        end
-
-        # thats it, loop for next interaction!
+        logg("sec elapsed: "*string(toq()))
     end
 end
 

@@ -1,9 +1,19 @@
+import Base:push!
+
 immutable LockVec
     locks::Vector{Atomic{Int64}}
     LockVec(N) = new(Atomic{Int64}[Atomic{Int64}(0) for i in 1:N])
 end
 
+@inline function is_locked(l::LockVec, i::Int64)
+    @inbounds p = l.locks[i][]==1
+    p
+end
+
 @inline function try_lock!(l::LockVec, i::Int64)
+    @inbounds if is_locked(l,i)
+        return false
+    end
     @inbounds p = atomic_xchg!(l.locks[i], 1)
     p == 0
 end
@@ -21,7 +31,6 @@ end
 end
 
 @inline function lock_something!(l::LockVec)
-    const rng = 1:nthreads()
     i = 1
     while !try_lock!(l, i)
         i = i%NTH+1
@@ -34,6 +43,7 @@ end
 const NTH = nthreads()
 
 immutable AKStack
+    count::Atomic{Int64}
     six::Vector{Int64}
     locks::LockVec
     stack1::Array{Int64,2}
@@ -41,10 +51,11 @@ immutable AKStack
     stack3::Array{Int64,2}
     function AKStack(N)
         sz = (nthreads(),N)
-        new(zeros(Int64,nthreads()), LockVec(nthreads()), zeros(Int64,sz), zeros(Int64,sz), zeros(Int64,sz))
+        new(Atomic{Int64}(0), zeros(Int64,nthreads()), LockVec(nthreads()), zeros(Int64,sz), zeros(Int64,sz), zeros(Int64,sz))
     end
 end
 
+# TODO: batch push
 @inline function push!(s::AKStack, a::Int64, b::Int64, c::Int64)
     i = lock_something!(s.locks)
     @inbounds six = s.six[i]+1
@@ -57,12 +68,15 @@ end
 end
 
 @inline function try_pop!(s::AKStack)
-    i = 0
-    @inbounds while i<NTH
-        i += 1
-        !try_lock!(s.locks,i) && continue
+    @inbounds for i in 1:NTH
+        if !try_lock!(s.locks,i)
+            continue
+        end
         six = s.six[i]
-        six==0 && continue
+        if six==0
+            unlock!(s.locks,i)
+            continue
+        end
         a = s.stack1[i,six]
         b = s.stack2[i,six]
         c = s.stack3[i,six]
