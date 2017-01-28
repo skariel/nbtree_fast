@@ -291,9 +291,10 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
 
     num_working_threads = Atomic{Int64}(0)
     th = string(hash(time()))
-
-    @threads for thi in 1:NTH
-        logg("time is: "*th,"w")
+    @threads for thi in 1:nthreads()
+    #for thi in 1:1
+        try
+        logg("- time is: "*th,"w")
         atomic_add!(num_working_threads, 1)
         is_working_thread = true
 
@@ -585,6 +586,9 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
             # thats it, loop for next interaction!
         end
         logg("sec elapsed: "*string(toq()))
+        catch e
+            logg(e)
+        end
     end
 end
 

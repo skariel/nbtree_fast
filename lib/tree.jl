@@ -85,7 +85,7 @@ function Tree(particles, S)
         exps,
         particles,
         zeros(Int64, 10000),
-        AKStack(10000),
+        AKStack(1000000),
         num_nodes_used,
         S)
 end
