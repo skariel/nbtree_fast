@@ -39,14 +39,25 @@ function inform!(t::DTree)
     nothing    
 end
 
-function collect!(t::DTree, ax::Vector{Float64},ay::Vector{Float64},az::Vector{Float64})
+function collect!(t::DTree)
+    @threads for i in eachindex(t.trees)
+        collect!(t.trees[i])
+    end
+end
+
+function accel!(t::DTree, ax,ay,az)
     @threads for i in eachindex(t.trees)
         vax = view(ax,_rng(ax,i,length(t.trees)))
         vay = view(ay,_rng(ay,i,length(t.trees)))
         vaz = view(az,_rng(az,i,length(t.trees)))
-        collect!(t.trees[i], vax,vay,vaz)
+        accel!(t.trees[i], vax,vay,vaz)
     end
     nothing    
+end
+
+function collect!(t::DTree, ax,ay,az)
+    collect!(t)
+    accel!(t, ax,ay,az)
 end
 
 function interact!(t::DTree, alpha::Float64, ax,ay,az, eps2)

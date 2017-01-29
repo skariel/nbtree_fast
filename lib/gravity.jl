@@ -585,9 +585,13 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
 end
 
 function collect!(t::Tree, ax,ay,az)
+    collect!(t)
+    accel!(t, ax,ay,az)
+end
+
+function collect!(t::Tree)
     n = t.nodes[1]
     _n = n
-    p = t.particles[1]
     e = t.exps[1]
     _e = e
     @fastmath @inbounds for i in 1:t.num_nodes_used
@@ -603,16 +607,26 @@ function collect!(t::Tree, ax,ay,az)
             _n = t.nodes[n.cix2]
             t.exps[n.cix2] = add_expansion_to_n1(_n,_e, n,e)
         end
-        if n.cix1<0 && n.cix2<0
-            for i in n.iix:n.fix
-                p = t.particles[i]
-                dax,day,daz = get_accel_from_node(n, e, p.x,p.y,p.z)
-                ax[i] += dax
-                ay[i] += day
-                az[i] += daz
-            end
-        end
     end
 end
 
+function accel!(t::Tree, ax,ay,az)
+    n = t.nodes[1]
+    p = t.particles[1]
+    e = t.exps[1]
+    @fastmath @inbounds for i in 1:t.num_nodes_used
+        e = t.exps[i]
+        n = t.nodes[i]
+        if n.cix1>0 || n.cix2>0
+            continue
+        end
+        @simd for jj in n.iix:n.fix
+            p = t.particles[jj]
+            dax,day,daz = get_accel_from_node(n, e, p.x,p.y,p.z)
+            ax[jj] += dax
+            ay[jj] += day
+            az[jj] += daz
+        end
+    end
+end
 
