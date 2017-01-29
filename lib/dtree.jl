@@ -25,10 +25,10 @@ function DTree(particles, S::Int64)
     group!(tree)
     trees = Tree[
         Tree(
-            particles[_crng(particles,i,nthreads()*2,nthreads(),2)],
+            particles[_crng(particles,i,2*nthreads()*2,2*nthreads(),2)],
             S,
         )
-        for i in 1:nthreads()
+        for i in 1:2*nthreads()
     ]
     DTree(trees,tree)
 end
