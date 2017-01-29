@@ -95,7 +95,7 @@ function interact!(t1::Tree, t2::Tree, alpha::Float64, ax,ay,az, eps2)
             if nbody2<16
                 # just do direct summation
                 p1 = t1.particles[ix1]
-                @fastmath @inbounds @simd for i2 in n2.iix:n2.fix
+                @simd for i2 in n2.iix:n2.fix
                     p2 = t2.particles[i2]
                     dx = p2.x - p1.x
                     dy = p2.y - p1.y
@@ -115,11 +115,6 @@ function interact!(t1::Tree, t2::Tree, alpha::Float64, ax,ay,az, eps2)
         x1=0.0; y1=0.0; z1=0.0; m1=0.0; l1=0.0;
         x2=0.0; y2=0.0; z2=0.0; m2=0.0; l2=0.0;
         if itype==I_CB
-            p2 = t2.particles[ix2]
-            x2=p2.x
-            y2=p2.y
-            z2=p2.z
-            m2=p2.m
             n1 = t1.nodes[ix1]
             nbody1 = n1.fix-n1.iix+1
             x1=n1.x
@@ -127,6 +122,11 @@ function interact!(t1::Tree, t2::Tree, alpha::Float64, ax,ay,az, eps2)
             z1=n1.z
             m1=n1.m
             l1=n1.l
+            p2 = t2.particles[ix2]
+            x2=p2.x
+            y2=p2.y
+            z2=p2.z
+            m2=p2.m
         elseif itype==I_BC
             p1 = t1.particles[ix1]
             x1=p1.x
