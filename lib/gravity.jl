@@ -584,7 +584,7 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
     end
 end
 
-function collect!(t::Tree, ax::Vector{Float64},ay::Vector{Float64},az::Vector{Float64})
+function collect!(t::Tree, ax,ay,az)
     n = t.nodes[1]
     _n = n
     p = t.particles[1]

@@ -10,29 +10,11 @@ function _rng(vec, i, N)
     left:right
 end
 
-function _crng(vec,i,N,every,count)
-    println("----------")
-    v = Int64[]
-    for j=0:(count-1)
-        @show _rng(vec,i+every*j,N)
-        append!(v, collect(_rng(vec,i+every*j,N)))
-    end
-    v
-end
-
 function DTree(particles, S::Int64)
-    tree = Tree(particles, S)
-    group!(tree)
-
-    new_order_ixs = Int64[]
-    for i in 1:nthreads()
-        append!(new_order_ixs, _crng(particles,i,nthreads()*2,nthreads(),2))
-    end
-    tree.particles = tree.particles[new_order_ixs]
-
+    tree = Tree(view(particles,1:length(particles)), S)
     trees = Tree[
         Tree(
-            view(tree.particles, _rng(tree.particles,i,nthreads()*2)),
+            view(particles, _rng(tree.particles,i,nthreads())),
             S,
         )
         for i in 1:nthreads()
@@ -41,8 +23,9 @@ function DTree(particles, S::Int64)
 end
 
 function group!(t::DTree)
+    group!(t.tree)
     @threads for st in t.trees
-        group!(st)
+        group!(st, t.tree)
     end
     nothing
 end
@@ -56,19 +39,22 @@ function inform!(t::DTree)
     nothing    
 end
 
-# function collect!(t::Tree, ax::Vector{Float64},ay::Vector{Float64},az::Vector{Float64})
-#     @threads for st in t.trees
-#         collect!(st, )
-#     end
-#     nothing    
-# end
+function collect!(t::DTree, ax::Vector{Float64},ay::Vector{Float64},az::Vector{Float64})
+    @threads for i in eachindex(t.trees)
+        vax = view(ax,_rng(ax,i,length(t.trees)))
+        vay = view(ay,_rng(ay,i,length(t.trees)))
+        vaz = view(az,_rng(az,i,length(t.trees)))
+        collect!(t.trees[i], vax,vay,vaz)
+    end
+    nothing    
+end
 
 function interact!(t::DTree, alpha::Float64, ax,ay,az, eps2)
     @threads for i in eachindex(t.trees)
         t1 = t.trees[i]
-        vax = view(ax,_rng(ax,i,nthreads()))
-        vay = view(ax,_rng(ax,i,nthreads()))
-        vaz = view(ax,_rng(ax,i,nthreads()))
+        vax = view(ax,_rng(ax,i,length(t.trees)))
+        vay = view(ay,_rng(ay,i,length(t.trees)))
+        vaz = view(az,_rng(az,i,length(t.trees)))
         interact!(t1, alpha, vax,vay,vaz, eps2)
         for j in eachindex(t.trees)
             i==j && continue

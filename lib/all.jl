@@ -1,4 +1,5 @@
 using Base.Threads
+using Base.Test
 
 set_zero_subnormals(true)
 

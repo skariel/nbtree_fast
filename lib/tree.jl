@@ -146,7 +146,11 @@ function get_minmax_high(n::Node)
 end
 
 function group!(t::Tree)
-    minx,maxx, miny,maxy, minz,maxz = getminmax(t)
+    group!(t,t)
+end
+
+function group!(t::Tree, tminmax::Tree)
+    minx,maxx, miny,maxy, minz,maxz = getminmax(tminmax)
 
     # create root node
     node_ix = 1

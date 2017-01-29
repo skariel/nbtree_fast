@@ -1,5 +1,3 @@
-using Base.Test
-
 function get_acc(particles, ix, eps2)
     ax=0.0
     ay=0.0
@@ -18,7 +16,7 @@ function get_acc(particles, ix, eps2)
 end
 
 function perf(particles, ax,ay,az, N, eps2)
-    ixs = randperm(length(t.particles))[1:N]
+    ixs = randperm(length(particles))[1:N]
     rax = zeros(N)
     ray = zeros(N)
     raz = zeros(N)
@@ -31,6 +29,7 @@ function perf(particles, ax,ay,az, N, eps2)
         ray[i] = tay;
         raz[i] = taz;
     end
+    @show mean(abs(rax))
     dax = vax-rax
     day = vay-ray
     daz = vaz-raz
