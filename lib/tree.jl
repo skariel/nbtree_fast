@@ -62,11 +62,11 @@ Node() = Node(
         -1,                  # cix2::Int64 # second child index        
     )
 
-type Tree
+type Tree{T<:AbstractArray{Particle,1}}
     total_mass::Float64
     nodes::Vector{Node}
     exps::Vector{NodeExp}
-    particles::Vector{Particle}
+    particles::T
     stack1::Vector{Int64}
     stack2::Vector{Int64}
     stack3::Vector{Int64}
@@ -84,7 +84,7 @@ function Tree(particles, S)
     stack3 = zeros(Int64,10000)
     num_nodes_used = 0
     Tree(
-        sum(p.m for p in particles),
+        0.0,
         nodes,
         exps,
         particles,

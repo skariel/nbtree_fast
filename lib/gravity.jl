@@ -130,6 +130,7 @@ function inform!(t::Tree)
             n.cix2, # cix2::Int64 # second child index
         )
     end
+    t.total_mass = t.nodes[1].m
 end
 
 @inline function add_expansion_to_n1(n1, e1, n2, e2)
