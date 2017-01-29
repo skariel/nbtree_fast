@@ -23,18 +23,24 @@ end
 function DTree(particles, S::Int64)
     tree = Tree(particles, S)
     group!(tree)
+
+    new_order_ixs = Int64[]
+    for i in 1:nthreads()
+        append!(new_order_ixs, _crng(particles,i,nthreads()*2,nthreads(),2))
+    end
+    tree.particles = tree.particles[new_order_ixs]
+
     trees = Tree[
         Tree(
-            particles[_crng(particles,i,2*nthreads()*2,2*nthreads(),2)],
+            view(tree.particles, _rng(tree.particles,i,nthreads()*2)),
             S,
         )
-        for i in 1:2*nthreads()
+        for i in 1:nthreads()
     ]
     DTree(trees,tree)
 end
 
 function group!(t::DTree)
-    #group!(t.tree)
     @threads for st in t.trees
         group!(st)
     end
@@ -50,18 +56,30 @@ function inform!(t::DTree)
     nothing    
 end
 
+# function collect!(t::Tree, ax::Vector{Float64},ay::Vector{Float64},az::Vector{Float64})
+#     @threads for st in t.trees
+#         collect!(st, )
+#     end
+#     nothing    
+# end
+
 function interact!(t::DTree, alpha::Float64, ax,ay,az, eps2)
     @threads for i in eachindex(t.trees)
         t1 = t.trees[i]
-        interact!(t1, alpha, ax,ay,az, eps2)
+        vax = view(ax,_rng(ax,i,nthreads()))
+        vay = view(ax,_rng(ax,i,nthreads()))
+        vaz = view(ax,_rng(ax,i,nthreads()))
+        interact!(t1, alpha, vax,vay,vaz, eps2)
         for j in eachindex(t.trees)
             i==j && continue
             t2 = t.trees[j]
-            interact!(t1, t2, alpha, ax,ay,az, eps2)
+            interact!(t1, t2, alpha, vax,vay,vaz, eps2)
         end
     end
     nothing        
 end
+
+
 
 const I_BC = 3
 function interact!(t1::Tree, t2::Tree, alpha::Float64, ax,ay,az, eps2)
