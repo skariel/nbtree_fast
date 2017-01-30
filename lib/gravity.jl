@@ -659,10 +659,14 @@ function accel!(t::Tree, ax,ay,az)
     n = t.nodes[1]
     p = t.particles[1]
     e = t.exps[1]
+    old_pix = -1
     @fastmath @inbounds for i in eachindex(t.particles)
         p = t.particles[i]
-        e = t.exps[p.pix]
-        n = t.nodes[p.pix]
+        if old_pix != p.pix
+            old_pix = p.pix
+            e = t.exps[p.pix]
+            n = t.nodes[p.pix]
+        end
         dax,day,daz = get_accel_from_node(n, e, p.x,p.y,p.z)
         ax[i] += dax
         ay[i] += day
