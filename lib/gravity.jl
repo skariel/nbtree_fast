@@ -10,6 +10,13 @@ function inform!(t::Tree)
         m = 0.0
         l = 0.0
 
+        maxx = -1.0e30 # infinity, ha!
+        maxy = -1.0e30 # infinity, ha!
+        maxz = -1.0e30 # infinity, ha!
+        minx =  1.0e30 # infinity, ha!
+        miny =  1.0e30 # infinity, ha!
+        minz =  1.0e30 # infinity, ha!
+
         n = t.nodes[i]
         if n.cix1<0 && n.cix2<0
             # leaf node, just use particles
@@ -19,6 +26,25 @@ function inform!(t::Tree)
                 y += p.y*p.m
                 z += p.z*p.m
                 m += p.m
+
+                if p.x < minx
+                    minx = p.x
+                end
+                if p.x > maxx
+                    maxx = p.x
+                end
+                if p.y < miny
+                    miny = p.y
+                end
+                if p.y > maxy
+                    maxy = p.y
+                end
+                if p.z < minz
+                    minz = p.z
+                end
+                if p.z > maxz
+                    maxz = p.z
+                end
             end
             x /= m
             y /= m
@@ -42,6 +68,12 @@ function inform!(t::Tree)
             z = n2.z
             m = n2.m
             l = n2.l
+            maxx=n2.maxx
+            maxy=n2.maxy
+            maxz=n2.maxz
+            minx=n2.minx
+            miny=n2.miny
+            minz=n2.minz
         elseif n.cix2<0
             # single child, just transfer properties
             n1 = t.nodes[n.cix1]
@@ -50,6 +82,12 @@ function inform!(t::Tree)
             z = n1.z
             m = n1.m
             l = n1.l
+            maxx=n1.maxx
+            maxy=n1.maxy
+            maxz=n1.maxz
+            minx=n1.minx
+            miny=n1.miny
+            minz=n1.minz
         else
             # two children, merge properties
             n1 = t.nodes[n.cix1]
@@ -108,6 +146,13 @@ function inform!(t::Tree)
 
             lco = sqrt(max(l1,l2,l3,l4,l5,l6,l7,l8))
             l = min(lco,lch)
+
+            maxx = max(n1.maxx, n2.maxx)
+            maxy = max(n1.maxy, n2.maxy)
+            maxz = max(n1.maxz, n2.maxz)
+            minx = min(n1.minx, n2.minx)
+            miny = min(n1.miny, n2.miny)
+            minz = min(n1.minz, n2.minz)
         end
 
         t.nodes[i] = Node(
@@ -116,12 +161,12 @@ function inform!(t::Tree)
             z, # z::Float64
             m, # m::Float64
             l,
-            n.maxx,
-            n.minx,
-            n.maxy,
-            n.miny,
-            n.maxz,
-            n.minz,
+            maxx,
+            minx,
+            maxy,
+            miny,
+            maxz,
+            minz,
             n.dir,
             n.pix, # pix::Int64 # parent index
             n.iix, # iix::Int64 # first particle index
@@ -614,19 +659,13 @@ function accel!(t::Tree, ax,ay,az)
     n = t.nodes[1]
     p = t.particles[1]
     e = t.exps[1]
-    @fastmath @inbounds for i in 1:t.num_nodes_used
-        e = t.exps[i]
-        n = t.nodes[i]
-        if n.cix1>0 || n.cix2>0
-            continue
-        end
-        @simd for jj in n.iix:n.fix
-            p = t.particles[jj]
-            dax,day,daz = get_accel_from_node(n, e, p.x,p.y,p.z)
-            ax[jj] += dax
-            ay[jj] += day
-            az[jj] += daz
-        end
+    @fastmath @inbounds for i in eachindex(t.particles)
+        p = t.particles[i]
+        e = t.exps[p.pix]
+        n = t.nodes[p.pix]
+        dax,day,daz = get_accel_from_node(n, e, p.x,p.y,p.z)
+        ax[i] += dax
+        ay[i] += day
+        az[i] += daz
     end
 end
-

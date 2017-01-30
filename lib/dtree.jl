@@ -12,6 +12,7 @@ end
 
 function DTree(particles, S::Int64)
     tree = Tree(view(particles,1:length(particles)), S)
+    group!(tree)
     trees = Tree[
         Tree(
             view(particles, _rng(tree.particles,i,nthreads())),
@@ -22,8 +23,10 @@ function DTree(particles, S::Int64)
     DTree(trees,tree)
 end
 
-function group!(t::DTree)
-    group!(t.tree)
+function group!(t::DTree, glbl=false)
+    if glbl
+        group!(t.tree)
+    end
     @threads for st in t.trees
         group!(st, t.tree)
     end
@@ -46,7 +49,7 @@ function collect!(t::DTree)
 end
 
 function accel!(t::DTree, ax,ay,az)
-    @threads for i in eachindex(t.trees)
+    for i in eachindex(t.trees)
         vax = view(ax,_rng(ax,i,length(t.trees)))
         vay = view(ay,_rng(ay,i,length(t.trees)))
         vaz = view(az,_rng(az,i,length(t.trees)))

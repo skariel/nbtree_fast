@@ -178,7 +178,7 @@ function group!(t::Tree, tminmax::Tree)
     stack_ix = 1
     t.stack1[stack_ix] = 1
 
-    @inbounds while stack_ix > 0
+    @fastmath @inbounds while stack_ix > 0
         # pop node to split
         pix = t.stack1[stack_ix]  # parent index to be splitted
         pn = t.nodes[pix]        # parent node to be splitted
