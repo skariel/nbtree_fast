@@ -43,7 +43,7 @@ function inform!(t::DTree)
 end
 
 function collect!(t::DTree)
-    @threads for i in eachindex(t.trees)
+    for i in eachindex(t.trees)
         collect!(t.trees[i])
     end
 end
