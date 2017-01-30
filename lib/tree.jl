@@ -2,25 +2,15 @@
 immutable NodeExp
     px::Float64
     pxx::Float64
-    pxxx::Float64
-    pxxy::Float64
-    pxxz::Float64
     pxy::Float64
-    pxyy::Float64
-    pxyz::Float64
     pxz::Float64
-    pxzz::Float64
     py::Float64
     pyy::Float64
-    pyyy::Float64
-    pyyz::Float64
     pyz::Float64
-    pyzz::Float64
     pz::Float64
     pzz::Float64
-    pzzz::Float64
 end
-NodeExp() = NodeExp(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+NodeExp() = NodeExp(0,0,0,0,0,0,0,0,0)
 
 immutable Node
     x::Float64

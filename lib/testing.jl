@@ -52,7 +52,7 @@ function perf(particles, ax,ay,az, N, eps2)
     ee90 = sort(ee)[round(Int64, N*0.9)]
     ee95 = sort(ee)[round(Int64, N*0.9)]
     ee99 = sort(ee)[round(Int64, N*0.99)]
-    mx,my, ee50,ee90,ee95,ee99, mean(log10(ee)), std(log10(ee))
+    mx,my, ee50,ee90,ee95,ee99, mean(log10(ee)), std(log10(ee)), mean(ee)
 end
 
 function test_in_cell_mass(t::Tree)
