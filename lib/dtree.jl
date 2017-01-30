@@ -49,7 +49,7 @@ function collect!(t::DTree)
 end
 
 function accel!(t::DTree, ax,ay,az)
-    for i in eachindex(t.trees)
+    @threads for i in eachindex(t.trees)
         vax = view(ax,_rng(ax,i,length(t.trees)))
         vay = view(ay,_rng(ay,i,length(t.trees)))
         vaz = view(az,_rng(az,i,length(t.trees)))

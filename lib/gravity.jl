@@ -111,48 +111,48 @@ function inform!(t::Tree)
 
             lch = max(l1,l2)
 
-            dx1 = x-n.maxx
-            dy1 = y-n.maxy
-            dz1 = z-n.maxz
-            l1 = dx1*dx1+dy1*dy1+dz1*dz1            
-            dx2 = x-n.minx
-            dy2 = y-n.maxy
-            dz2 = z-n.maxz
-            l2 = dx2*dx2+dy2*dy2+dz2*dz2
-            dx3 = x-n.maxx
-            dy3 = y-n.miny
-            dz3 = z-n.maxz
-            l3 = dx3*dx3+dy3*dy3+dz3*dz3
-            dx4 = x-n.minx
-            dy4 = y-n.miny
-            dz4 = z-n.maxz
-            l4 = dx4*dx4+dy4*dy4+dz4*dz4
-            dx5 = x-n.maxx
-            dy5 = y-n.maxy
-            dz5 = z-n.minz
-            l5 = dx5*dx5+dy5*dy5+dz5*dz5
-            dx6 = x-n.minx
-            dy6 = y-n.maxy
-            dz6 = z-n.minz
-            l6 = dx6*dx6+dy6*dy6+dz6*dz6
-            dx7 = x-n.maxx
-            dy7 = y-n.miny
-            dz7 = z-n.minz
-            l7 = dx7*dx7+dy7*dy7+dz7*dz7
-            dx8 = x-n.minx
-            dy8 = y-n.miny
-            dz8 = z-n.minz
-            l8 = dx8*dx8+dy8*dy8+dz8*dz8
-
-            lco = sqrt(max(l1,l2,l3,l4,l5,l6,l7,l8))
-            l = min(lco,lch)
-
             maxx = max(n1.maxx, n2.maxx)
             maxy = max(n1.maxy, n2.maxy)
             maxz = max(n1.maxz, n2.maxz)
             minx = min(n1.minx, n2.minx)
             miny = min(n1.miny, n2.miny)
-            minz = min(n1.minz, n2.minz)
+            minz = min(n1.minz, n2.minz)            
+
+            dx1 = x-maxx
+            dy1 = y-maxy
+            dz1 = z-maxz
+            l1 = dx1*dx1+dy1*dy1+dz1*dz1            
+            dx2 = x-minx
+            dy2 = y-maxy
+            dz2 = z-maxz
+            l2 = dx2*dx2+dy2*dy2+dz2*dz2
+            dx3 = x-maxx
+            dy3 = y-miny
+            dz3 = z-maxz
+            l3 = dx3*dx3+dy3*dy3+dz3*dz3
+            dx4 = x-minx
+            dy4 = y-miny
+            dz4 = z-maxz
+            l4 = dx4*dx4+dy4*dy4+dz4*dz4
+            dx5 = x-maxx
+            dy5 = y-maxy
+            dz5 = z-minz
+            l5 = dx5*dx5+dy5*dy5+dz5*dz5
+            dx6 = x-minx
+            dy6 = y-maxy
+            dz6 = z-minz
+            l6 = dx6*dx6+dy6*dy6+dz6*dz6
+            dx7 = x-maxx
+            dy7 = y-miny
+            dz7 = z-minz
+            l7 = dx7*dx7+dy7*dy7+dz7*dz7
+            dx8 = x-minx
+            dy8 = y-miny
+            dz8 = z-minz
+            l8 = dx8*dx8+dy8*dy8+dz8*dz8
+
+            lco = sqrt(max(l1,l2,l3,l4,l5,l6,l7,l8))
+            l = min(lco,lch)
         end
 
         t.nodes[i] = Node(
@@ -283,36 +283,36 @@ end
 
     ax = e.px +
         e.pxx*dx +
-        e.pxxx*dx2/2 +
-        e.pxxy*dx*dy +
-        e.pxxz*dx*dz +
+        #e.pxxx*dx2/2 +
+        #e.pxxy*dx*dy +
+        #e.pxxz*dx*dz +
         e.pxy*dy +
-        e.pxyy*dy2/2 +
-        e.pxyz*dy*dz +
-        e.pxz*dz +
-        e.pxzz*dz2/2
+        #e.pxyy*dy2/2 +
+        #e.pxyz*dy*dz +
+        e.pxz*dz #+
+        #e.pxzz*dz2/2
 
     ay = e.py +
-        e.pxxy*dx2/2 +
+        #e.pxxy*dx2/2 +
         e.pxy*dx +
-        e.pxyy*dx*dy +
-        e.pxyz*dx*dz +
+        #e.pxyy*dx*dy +
+        #e.pxyz*dx*dz +
         e.pyy*dy +
-        e.pyyy*dy2/2 +
-        e.pyyz*dy*dz +
-        e.pyz*dz +
-        e.pyzz*dz2/2
+        #e.pyyy*dy2/2 +
+        #e.pyyz*dy*dz +
+        e.pyz*dz #+
+        #e.pyzz*dz2/2
     
     az = e.pz +
-        e.pxxz*dx2/2 +
-        e.pxyz*dx*dy +
+        #e.pxxz*dx2/2 +
+        #e.pxyz*dx*dy +
         e.pxz*dx +
-        e.pxzz*dx*dz +
-        e.pyyz*dy2/2 +
+        #e.pxzz*dx*dz +
+        #e.pyyz*dy2/2 +
         e.pyz*dy +
-        e.pyzz*dy*dz +
-        e.pzz*dz +
-        e.pzzz*dz2/2
+        #e.pyzz*dy*dz +
+        e.pzz*dz #+
+        #e.pzzz*dz2/2
 
     ax, ay, az
 end
