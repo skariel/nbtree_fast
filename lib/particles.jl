@@ -4,18 +4,17 @@ immutable Particle <: AbstractParticle
     _x::Float64
     _y::Float64
     _z::Float64
-    _m::Float64
     _pix::Int64 # parent index
 end
 
 getx(p::Particle) = p._x
 gety(p::Particle) = p._y
 getz(p::Particle) = p._z
-getm(p::Particle) = p._m
+getm(p::Particle) = 1.0  # p._m
 getpix(p::Particle) = p._pix
 @inline function setpix(v,i,val)
     @inbounds p = v[i]
-    @inbounds v[i] = Particle(p._x, p._y, p._z, p._m, val)
+    @inbounds v[i] = Particle(p._x, p._y, p._z, val)
 end
 
 function myrand()
@@ -37,4 +36,4 @@ function myrand()
 end
 
 make_particles(N) =
-    [Particle(myrand()..., 1.0, -1) for i in 1:N]
+    [Particle(myrand()..., -1) for i in 1:N]

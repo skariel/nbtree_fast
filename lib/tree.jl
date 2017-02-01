@@ -62,10 +62,10 @@ Node() = Node(
         -1,                  # cix2::Int64 # second child index        
     )
 
-type Tree{T}
+type Tree{T, U, V}
     total_mass::Float64
-    nodes::Vector{Node}
-    exps::Vector{NodeExp}
+    nodes::U
+    exps::V
     particles::T
     stack1::Vector{Int64}
     stack2::Vector{Int64}
@@ -74,11 +74,7 @@ type Tree{T}
     S::Int64                 # maximum number of particles per node
 end
 
-function Tree(particles, S)
-    nodec = round(Int64, 0.8*length(particles))
-    nodes = Node[Node() for i in 1:nodec]
-    exps = NodeExp[NodeExp() for i in 1:nodec]
-    exp_ixs = -ones(Int64,nodec)
+function Tree(particles, nodes, exps, S)
     stack1 = zeros(Int64,10000)
     stack2 = zeros(Int64,10000)
     stack3 = zeros(Int64,10000)
@@ -92,7 +88,14 @@ function Tree(particles, S)
         stack2,
         stack3,
         num_nodes_used,
-        S)
+        S)    
+end
+
+function Tree(particles, S)
+    nodec = round(Int64, 0.8*length(particles))
+    nodes = Node[Node() for i in 1:nodec]
+    exps = NodeExp[NodeExp() for i in 1:nodec]
+    Tree(particles, nodes, exps, S)
 end
 
 function getminmax(t::Tree)

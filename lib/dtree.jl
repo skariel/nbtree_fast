@@ -15,7 +15,9 @@ function DTree(particles, S::Int64)
     group!(tree)
     trees = Tree[
         Tree(
-            view(particles, _rng(tree.particles,i,nthreads())),
+            view(tree.particles, _rng(tree.particles, i,nthreads())),
+            view(tree.nodes    , _rng(tree.nodes    , i,nthreads())),
+            view(tree.exps     , _rng(tree.exps     , i,nthreads())),
             S,
         )
         for i in 1:nthreads()
