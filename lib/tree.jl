@@ -92,7 +92,7 @@ function Tree(particles, nodes, exps, S)
 end
 
 function Tree(particles, S)
-    nodec = round(Int64, 0.4*length(particles))
+    nodec = round(Int64, 0.31*length(particles))
     nodes = Node[Node() for i in 1:nodec]
     exps = NodeExp[NodeExp() for i in 1:nodec]
     Tree(particles, nodes, exps, S)
