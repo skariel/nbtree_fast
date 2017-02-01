@@ -22,28 +22,28 @@ function inform!(t::Tree)
             # leaf node, just use particles
             for j in n.iix:n.fix
                 p = t.particles[j]
-                x += p.x*p.m
-                y += p.y*p.m
-                z += p.z*p.m
-                m += p.m
+                x += getx(p)*getm(p)
+                y += gety(p)*getm(p)
+                z += getz(p)*getm(p)
+                m += getm(p)
 
-                if p.x < minx
-                    minx = p.x
+                if getx(p) < minx
+                    minx = getx(p)
                 end
-                if p.x > maxx
-                    maxx = p.x
+                if getx(p) > maxx
+                    maxx = getx(p)
                 end
-                if p.y < miny
-                    miny = p.y
+                if gety(p) < miny
+                    miny = gety(p)
                 end
-                if p.y > maxy
-                    maxy = p.y
+                if gety(p) > maxy
+                    maxy = gety(p)
                 end
-                if p.z < minz
-                    minz = p.z
+                if getz(p) < minz
+                    minz = getz(p)
                 end
-                if p.z > maxz
-                    maxz = p.z
+                if getz(p) > maxz
+                    maxz = getz(p)
                 end
             end
             x /= m
@@ -51,9 +51,9 @@ function inform!(t::Tree)
             z /= m
             for j in n.iix:n.fix
                 p = t.particles[j]
-                dx = x-p.x
-                dy = y-p.y
-                dz = z-p.z
+                dx = x-getx(p)
+                dy = y-gety(p)
+                dz = z-getz(p)
                 dr2 = dx*dx+dy*dy+dz*dz
                 if dr2>l
                     l=dr2
@@ -332,7 +332,7 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
     t.stack3[six]=I_CS # root is a self interaction
     n = t.nodes[1]
     n1 = n
-    p1 = Particle(0.0,0.0,0.0,0.0,-1)
+    p1 = t.particles[1]
     p2 = p1
     e = t.exps[1]
     @fastmath @inbounds while six > 0
@@ -351,13 +351,13 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
                     p1 = t.particles[i1]
                     @fastmath @inbounds @simd for i2 in (i1+1):n.fix
                         p2 = t.particles[i2]
-                        dx = p2.x - p1.x
-                        dy = p2.y - p1.y
-                        dz = p2.z - p1.z
+                        dx = getx(p2) - getx(p1)
+                        dy = gety(p2) - gety(p1)
+                        dz = getz(p2) - getz(p1)
                         dr2 = dx*dx + dy*dy + dz*dz + eps2
                         dr3 = dr2*sqrt(dr2)
-                        fac1 = p2.m/dr3
-                        fac2 = p1.m/dr3
+                        fac1 = getm(p2)/dr3
+                        fac2 = getm(p1)/dr3
                         ax[i1] += dx*fac1
                         ay[i1] += dy*fac1
                         az[i1] += dz*fac1
@@ -397,13 +397,13 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
             p2 = t.particles[ix2]
             @fastmath @inbounds @simd for i1 in n1.iix:n1.fix
                 p1 = t.particles[i1]
-                dx = p2.x - p1.x
-                dy = p2.y - p1.y
-                dz = p2.z - p1.z
+                dx = getx(p2) - getx(p1)
+                dy = gety(p2) - gety(p1)
+                dz = getz(p2) - getz(p1)
                 dr2 = dx*dx + dy*dy + dz*dz + eps2
                 dr3 = dr2*sqrt(dr2)
-                fac1 = p2.m/dr3
-                fac2 = p1.m/dr3
+                fac1 = getm(p2)/dr3
+                fac2 = getm(p1)/dr3
                 ax[i1] += dx*fac1
                 ay[i1] += dy*fac1
                 az[i1] += dz*fac1
@@ -418,10 +418,10 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
         x=0.0; y=0.0; z=0.0; m=0.0; l=0.0;
         if itype==I_CB
             p2 = t.particles[ix2]
-            x=p2.x
-            y=p2.y
-            z=p2.z
-            m=p2.m
+            x=getx(p2)
+            y=gety(p2)
+            z=getz(p2)
+            m=getm(p2)
         else
             n = t.nodes[ix2]
             x=n.x
@@ -542,13 +542,13 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
                     p1 = t.particles[i1]
                     @fastmath @inbounds @simd for i2 in n.iix:n.fix
                         p2 = t.particles[i2]
-                        dx = p2.x - p1.x
-                        dy = p2.y - p1.y
-                        dz = p2.z - p1.z
+                        dx = getx(p2) - getx(p1)
+                        dy = gety(p2) - gety(p1)
+                        dz = getz(p2) - getz(p1)
                         dr2 = dx*dx + dy*dy + dz*dz + eps2
                         dr3 = dr2*sqrt(dr2)
-                        fac1 = p2.m/dr3
-                        fac2 = p1.m/dr3
+                        fac1 = getm(p2)/dr3
+                        fac2 = getm(p1)/dr3
                         ax[i1] += dx*fac1
                         ay[i1] += dy*fac1
                         az[i1] += dz*fac1
@@ -594,13 +594,13 @@ function interact!(t::Tree, alpha::Float64, ax,ay,az, eps2)
             p2 = t.particles[ix2]
             @fastmath @inbounds @simd for i1 in n1.iix:n1.fix
                 p1 = t.particles[i1]
-                dx = p2.x - p1.x
-                dy = p2.y - p1.y
-                dz = p2.z - p1.z
+                dx = getx(p2) - getx(p1)
+                dy = gety(p2) - gety(p1)
+                dz = getz(p2) - getz(p1)
                 dr2 = dx*dx + dy*dy + dz*dz + eps2
                 dr3 = dr2*sqrt(dr2)
-                fac1 = p2.m/dr3
-                fac2 = p1.m/dr3
+                fac1 = getm(p2)/dr3
+                fac2 = getm(p1)/dr3
                 ax[i1] += dx*fac1
                 ay[i1] += dy*fac1
                 az[i1] += dz*fac1
@@ -662,12 +662,12 @@ function accel!(t::Tree, ax,ay,az)
     old_pix = -1
     @fastmath @inbounds for i in eachindex(t.particles)
         p = t.particles[i]
-        if old_pix != p.pix
-            old_pix = p.pix
-            e = t.exps[p.pix]
-            n = t.nodes[p.pix]
+        if old_pix != getpix(p)
+            old_pix = getpix(p)
+            e = t.exps[getpix(p)]
+            n = t.nodes[getpix(p)]
         end
-        dax,day,daz = get_accel_from_node(n, e, p.x,p.y,p.z)
+        dax,day,daz = get_accel_from_node(n, e, getx(p),gety(p),getz(p))
         ax[i] += dax
         ay[i] += day
         az[i] += daz

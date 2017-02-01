@@ -62,7 +62,7 @@ Node() = Node(
         -1,                  # cix2::Int64 # second child index        
     )
 
-type Tree{T<:AbstractArray{Particle,1}}
+type Tree{T}
     total_mass::Float64
     nodes::Vector{Node}
     exps::Vector{NodeExp}
@@ -103,20 +103,20 @@ function getminmax(t::Tree)
     minz = 1.0e30 # infinity, ha!
     maxz = -1.0e30 # minus infinity, ha!
     for p in t.particles
-        if p.x<minx
-            minx=p.x
-        elseif p.x>maxx
-            maxx=p.x
+        if getx(p)<minx
+            minx=getx(p)
+        elseif getx(p)>maxx
+            maxx=getx(p)
         end
-        if p.y<miny
-            miny=p.y
-        elseif p.y>maxy
-            maxy=p.y
+        if gety(p)<miny
+            miny=gety(p)
+        elseif gety(p)>maxy
+            maxy=gety(p)
         end
-        if p.z<minz
-            minz=p.z
-        elseif p.z>maxz
-            maxz=p.z
+        if getz(p)<minz
+            minz=getz(p)
+        elseif getz(p)>maxz
+            maxz=getz(p)
         end
     end
     dx = (maxx-minx)*0.001
@@ -221,8 +221,7 @@ function group!(t::Tree, tminmax::Tree)
                 # node has not enough particles to be splitted
                 # tell the particles of their new parent!
                 for i in pn.iix:split
-                    p = t.particles[i]
-                    t.particles[i] = Particle(p.x,p.y,p.z,p.m,node_ix)
+                    setpix(t.particles, i, node_ix)
                 end
             end
             cix1 = node_ix
@@ -261,8 +260,7 @@ function group!(t::Tree, tminmax::Tree)
                 # node has not enough particles to be splitted
                 # tell the particles of their new parent!
                 for i in (split+1):pn.fix
-                    p = t.particles[i]
-                    t.particles[i] = Particle(p.x,p.y,p.z,p.m,node_ix)
+                    setpix(t.particles, i, node_ix)
                 end
             end
             cix2 = node_ix
@@ -307,9 +305,9 @@ end
     end
     !cmp(x[lix], at) ? (lix-1) : lix
 end
-@inline splitx!(from_ix, to_ix, x, at) = split!(from_ix, to_ix, x, at, (u,v)->u.x<v)
-@inline splity!(from_ix, to_ix, x, at) = split!(from_ix, to_ix, x, at, (u,v)->u.y<v)
-@inline splitz!(from_ix, to_ix, x, at) = split!(from_ix, to_ix, x, at, (u,v)->u.z<v)
+@inline splitx!(from_ix, to_ix, x, at) = split!(from_ix, to_ix, x, at, (p,_x)->getx(p)<_x)
+@inline splity!(from_ix, to_ix, y, at) = split!(from_ix, to_ix, y, at, (p,_y)->gety(p)<_y)
+@inline splitz!(from_ix, to_ix, z, at) = split!(from_ix, to_ix, z, at, (p,_z)->getz(p)<_z)
 
 @inline function splitdir!(x, node)
     if node.dir==0

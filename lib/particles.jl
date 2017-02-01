@@ -1,9 +1,21 @@
-immutable Particle
-    x::Float64
-    y::Float64
-    z::Float64
-    m::Float64
-    pix::Int64 # parent index
+abstract AbstractParticle
+
+immutable Particle <: AbstractParticle
+    _x::Float64
+    _y::Float64
+    _z::Float64
+    _m::Float64
+    _pix::Int64 # parent index
+end
+
+getx(p::Particle) = p._x
+gety(p::Particle) = p._y
+getz(p::Particle) = p._z
+getm(p::Particle) = p._m
+getpix(p::Particle) = p._pix
+@inline function setpix(v,i,val)
+    @inbounds p = v[i]
+    @inbounds v[i] = Particle(p._x, p._y, p._z, p._m, val)
 end
 
 function myrand()

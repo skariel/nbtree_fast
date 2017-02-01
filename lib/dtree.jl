@@ -34,7 +34,7 @@ function group!(t::DTree, glbl=false)
 end
 
 function inform!(t::DTree)
-    total_mass = sum(p.m for p in t.tree.particles)
+    total_mass = sum(getm(p) for p in t.tree.particles)
     @threads for st in t.trees
         inform!(st)
         st.total_mass = total_mass
@@ -94,7 +94,7 @@ function interact!(t1::Tree, t2::Tree, alpha::Float64, ax,ay,az, eps2)
     t1.stack3[six]=I_CC
     n1 = t1.nodes[1]
     n2 = t2.nodes[1]
-    p1 = Particle(0.0,0.0,0.0,0.0,-1)
+    p1 = t1.particles[1]
     p2 = p1
     e = t1.exps[1]
     @fastmath @inbounds while six > 0
@@ -111,12 +111,12 @@ function interact!(t1::Tree, t2::Tree, alpha::Float64, ax,ay,az, eps2)
                 p1 = t1.particles[ix1]
                 @simd for i2 in n2.iix:n2.fix
                     p2 = t2.particles[i2]
-                    dx = p2.x - p1.x
-                    dy = p2.y - p1.y
-                    dz = p2.z - p1.z
+                    dx = getx(p2) - getx(p1)
+                    dy = gety(p2) - gety(p1)
+                    dz = getz(p2) - getz(p1)
                     dr2 = dx*dx + dy*dy + dz*dz + eps2
                     dr3 = dr2*sqrt(dr2)
-                    fac = p2.m/dr3
+                    fac = getm(p2)/dr3
                     ax[ix1] += dx*fac
                     ay[ix1] += dy*fac
                     az[ix1] += dz*fac
@@ -137,16 +137,16 @@ function interact!(t1::Tree, t2::Tree, alpha::Float64, ax,ay,az, eps2)
             m1=n1.m
             l1=n1.l
             p2 = t2.particles[ix2]
-            x2=p2.x
-            y2=p2.y
-            z2=p2.z
-            m2=p2.m
+            x2=getx(p2)
+            y2=gety(p2)
+            z2=getz(p2)
+            m2=getm(p2)
         elseif itype==I_BC
             p1 = t1.particles[ix1]
-            x1=p1.x
-            y1=p1.y
-            z1=p1.z
-            m1=p1.m
+            x1=getx(p1)
+            y1=gety(p1)
+            z1=getz(p1)
+            m1=getm(p1)
 
             x2=n2.x
             y2=n2.y
@@ -259,12 +259,12 @@ function interact!(t1::Tree, t2::Tree, alpha::Float64, ax,ay,az, eps2)
                     p1 = t1.particles[i1]
                     @fastmath @inbounds @simd for i2 in n2.iix:n2.fix
                         p2 = t2.particles[i2]
-                        dx = p2.x - p1.x
-                        dy = p2.y - p1.y
-                        dz = p2.z - p1.z
+                        dx = getx(p2) - getx(p1)
+                        dy = gety(p2) - gety(p1)
+                        dz = getz(p2) - getz(p1)
                         dr2 = dx*dx + dy*dy + dz*dz + eps2
                         dr3 = dr2*sqrt(dr2)
-                        fac1 = p2.m/dr3
+                        fac1 = getm(p2)/dr3
                         ax[i1] += dx*fac1
                         ay[i1] += dy*fac1
                         az[i1] += dz*fac1
@@ -328,12 +328,12 @@ function interact!(t1::Tree, t2::Tree, alpha::Float64, ax,ay,az, eps2)
                 p2 = t2.particles[ix2]
                 @fastmath @inbounds @simd for i1 in n1.iix:n1.fix
                     p1 = t1.particles[i1]
-                    dx = p2.x - p1.x
-                    dy = p2.y - p1.y
-                    dz = p2.z - p1.z
+                    dx = getx(p2) - getx(p1)
+                    dy = gety(p2) - gety(p1)
+                    dz = getz(p2) - getz(p1)
                     dr2 = dx*dx + dy*dy + dz*dz + eps2
                     dr3 = dr2*sqrt(dr2)
-                    fac = p2.m/dr3
+                    fac = getm(p2)/dr3
                     ax[i1] += dx*fac
                     ay[i1] += dy*fac
                     az[i1] += dz*fac
@@ -361,12 +361,12 @@ function interact!(t1::Tree, t2::Tree, alpha::Float64, ax,ay,az, eps2)
             p1 = t1.particles[ix1]
             @fastmath @inbounds @simd for i2 in n2.iix:n2.fix
                 p2 = t2.particles[i2]
-                dx = p2.x - p1.x
-                dy = p2.y - p1.y
-                dz = p2.z - p1.z
+                dx = getx(p2) - getx(p1)
+                dy = gety(p2) - gety(p1)
+                dz = getz(p2) - getz(p1)
                 dr2 = dx*dx + dy*dy + dz*dz + eps2
                 dr3 = dr2*sqrt(dr2)
-                fac1 = p2.m/dr3
+                fac1 = getm(p2)/dr3
                 ax[ix1] += dx*fac1
                 ay[ix1] += dy*fac1
                 az[ix1] += dz*fac1

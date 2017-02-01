@@ -3,9 +3,9 @@ function get_acc(particles, ix, eps2)
     ay=0.0
     az=0.0
     @inbounds for p in particles
-        dx = p.x-particles[ix].x
-        dy = p.y-particles[ix].y
-        dz = p.z-particles[ix].z
+        dx = getx(p)-getx(particles[ix])
+        dy = gety(p)-gety(particles[ix])
+        dz = getz(p)-getz(particles[ix])
         dr2 = dx*dx+dy*dy+dz*dz+eps2
         dr3 = dr2*sqrt(dr2)
         ax += dx/dr3
@@ -57,9 +57,9 @@ end
 
 function test_in_cell_mass(t::Tree)
     for p in t.particles
-        @assert p.pix > 0
+        @assert getpix(p) > 0
         i=0
-        n = t.nodes[p.pix]
+        n = t.nodes[getpix(p)]
         while true
             i += 1
             @assert i<256
@@ -100,12 +100,12 @@ function test_in_cell_mass(t::Tree)
         m = 0.0
         for pix in n.iix:n.fix
             p = t.particles[pix]
-            @assert p.x <= n.maxx && p.x >= n.minx
-            @assert p.y <= n.maxy && p.y >= n.miny
-            @assert p.z <= n.maxz && p.z >= n.minz
-            dx = p.x-n.x
-            dy = p.y-n.y
-            dz = p.z-n.z
+            @assert getx(p) <= n.maxx && getx(p) >= n.minx
+            @assert gety(p) <= n.maxy && gety(p) >= n.miny
+            @assert getz(p) <= n.maxz && getz(p) >= n.minz
+            dx = getx(p)-n.x
+            dy = gety(p)-n.y
+            dz = getz(p)-n.z
             dr2 = dx*dx+dy*dy+dz*dz
             try
                 @assert (n.l*n.l - dr2) >= -1.0e-13
@@ -115,7 +115,7 @@ function test_in_cell_mass(t::Tree)
                 @show nix, n.m
                 return
             end
-            m += p.m
+            m += getm(p)
         end
         @test_approx_eq n.m m
         m = 0.0
@@ -376,110 +376,4 @@ function test_mov()
     tot
 end
 
-
-function test_exp()
-    n1 = Node(
-        -2.0, 2.0, 1.0, 1.0, 1.0,
-        1.0, -1.0, 1.0, -1.0, 1.0, -1.0,
-        0, -1, -1, -1, -1, -1, 
-    )   
-    e1 = NodeExp()
-
-    p = Particle(5.0,0.0,0.0,1.0,-1)
-
-    # make them interact...
-    x=p.x
-    y=p.y
-    z=p.z
-    m=p.m
-
-    dx = x-n1.x
-    dy = y-n1.y
-    dz = z-n1.z
-    dx2 = dx*dx
-    dy2 = dy*dy
-    dz2 = dz*dz
-    dr2 = dx2 + dy2 + dz2
-    dr = sqrt(dr2)
-    M = n1.m+m
-
-    fac = 1.0
-    alpha = 0.5
-    l = 0.0
-    @assert (n1.l + l)/dr < alpha/fac # MAC test
-
-    # MAC succesful, execute interaction
-    dr3 = dr2*dr
-    dr5 = dr3*dr2
-    dr7 = dr2*dr5
-    dx3 = dx2*dx
-    dy3 = dy2*dy
-    dz3 = dz2*dz
-
-    @show dx
-    @show dx3
-    px = dx/dr3
-    py = dy/dr3
-    pz = dz/dr3
-
-    pxx = (3*dx2-dr2)/dr5
-    pyy = (3*dy2-dr2)/dr5
-    pzz = (3*dz2-dr2)/dr5
-
-    pxy = 3*dx*dy/dr5
-    pxz = 3*dx*dz/dr5
-    pyz = 3*dy*dz/dr5
-
-    pxxx = 3*dx*(5*dx2-3*dr2)/dr7
-    pyyy = 3*dy*(5*dy2-3*dr2)/dr7
-    pzzz = 3*dz*(5*dz2-3*dr2)/dr7
-
-    pxxy = -3*dy*(dr2-5*dx2)/dr7
-    pxxz = -3*dz*(dr2-5*dx2)/dr7
-    pyyz = -3*dz*(dr2-5*dy2)/dr7
-    pyzz = -3*dy*(dr2-5*dz2)/dr7
-    pxyy = -3*dx*(dr2-5*dy2)/dr7
-    pxzz = -3*dx*(dr2-5*dz2)/dr7
-
-    pxyz = 15*dx*dy*dz/dr7
-
-    e1 = NodeExp(
-        m*px,
-        m*pxx,
-        m*pxxx,
-        m*pxxy,
-        m*pxxz,
-        m*pxy,
-        m*pxyy,
-        m*pxyz,
-        m*pxz,
-        m*pxzz,
-        m*py,
-        m*pyy,
-        m*pyyy,
-        m*pyyz,
-        m*pyz,
-        m*pyzz,
-        m*pz,
-        m*pzz,
-        m*pzzz,
-    )   
-    tx = n1.minx
-    ty = n1.miny
-    tz = n1.maxz
-    @show get_accel_from_node(n1,e1, n1.x,n1.y,n1.z)[1] 
-    @show get_accel_from_node(n1,e1, tx,ty,tz)[1]
-
-    dx = x-tx
-    dy = y-ty
-    dz = z-tz
-    dr2 = dx*dx+dy*dy+dz*dz
-    @show dx*m/dr2/sqrt(dr2)
-
-    @show px
-    @show pxx
-    @show pxxx
-
-    @show pxy
-end
 
