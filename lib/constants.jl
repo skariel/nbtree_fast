@@ -1,0 +1,2 @@
+const MASS_POWER_FAC = 0.15
+const NODES_FAC = 0.31

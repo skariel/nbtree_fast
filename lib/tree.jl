@@ -2,25 +2,15 @@
 immutable NodeExp
     px::Float64
     pxx::Float64
-    pxxx::Float64
-    pxxy::Float64
-    pxxz::Float64
     pxy::Float64
-    pxyy::Float64
-    pxyz::Float64
     pxz::Float64
-    pxzz::Float64
     py::Float64
     pyy::Float64
-    pyyy::Float64
-    pyyz::Float64
     pyz::Float64
-    pyzz::Float64
     pz::Float64
     pzz::Float64
-    pzzz::Float64
 end
-NodeExp() = NodeExp(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+NodeExp() = NodeExp(0,0,0,0,0,0,0,0,0)
 
 immutable Node
     x::Float64
@@ -92,7 +82,7 @@ function Tree(particles, nodes, exps, S)
 end
 
 function Tree(particles, S)
-    nodec = round(Int64, 0.31*length(particles))
+    nodec = round(Int64, NODES_FAC*length(particles))
     nodes = Node[Node() for i in 1:nodec]
     exps = NodeExp[NodeExp() for i in 1:nodec]
     Tree(particles, nodes, exps, S)
@@ -250,7 +240,7 @@ function group!(t::Tree, tminmax::Tree)
                 (pn.dir+1)%3,
                 pix,                 # pix::Int64 # parent index
                 split+1,             # iix::Int64 # first particle index
-                pn.fix,                # pnum::Int64 # number of particles
+                pn.fix,              # pnum::Int64 # number of particles
                 -1,                  # cix1::Int64 # first child index
                 -1,                  # cix2::Int64 # second child index                        
             )

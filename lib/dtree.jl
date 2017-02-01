@@ -181,7 +181,7 @@ function interact!(t1::Tree, t2::Tree, alpha::Float64, ax,ay,az, eps2)
         dr2 = dx2 + dy2 + dz2
         dr = sqrt(dr2)
         M = m1+m2
-        @fastmath fac = (M/t1.total_mass)^0.15
+        @fastmath fac = (M/t1.total_mass)^MASS_POWER_FAC
         @fastmath if (l1 + l2)/dr < alpha/fac
             # MAC succesful, execute interaction
             dr2 += eps2
@@ -190,11 +190,6 @@ function interact!(t1::Tree, t2::Tree, alpha::Float64, ax,ay,az, eps2)
             if itype!=I_BC
                 # expansion needed
                 dr5 = dr3*dr2
-                dr7 = dr2*dr5
-                dr73 = dr7/3
-                dx3 = dx2*dx
-                dy3 = dy2*dy
-                dz3 = dz2*dz
 
                 px = dx/dr3
                 py = dy/dr3
@@ -208,40 +203,17 @@ function interact!(t1::Tree, t2::Tree, alpha::Float64, ax,ay,az, eps2)
                 pxz = 3*dx*dz/dr5
                 pyz = 3*dy*dz/dr5
 
-                pxxx = dx*(5*dx2-3*dr2)/dr73
-                pyyy = dy*(5*dy2-3*dr2)/dr73
-                pzzz = dz*(5*dz2-3*dr2)/dr73
-
-                pxxy = dy*(5*dx2-dr2)/dr73
-                pxxz = dz*(5*dx2-dr2)/dr73
-                pyyz = dz*(5*dy2-dr2)/dr73
-                pyzz = dy*(5*dz2-dr2)/dr73
-                pxyy = dx*(5*dy2-dr2)/dr73
-                pxzz = dx*(5*dz2-dr2)/dr73
-
-                pxyz = 15*dx*dy*dz/dr7
-
                 e = t1.exps[ix1]
                 t1.exps[ix1] = NodeExp(
                     e.px+m2*px,
                     e.pxx+m2*pxx,
-                    e.pxxx+m2*pxxx,
-                    e.pxxy+m2*pxxy,
-                    e.pxxz+m2*pxxz,
                     e.pxy+m2*pxy,
-                    e.pxyy+m2*pxyy,
-                    e.pxyz+m2*pxyz,
                     e.pxz+m2*pxz,
-                    e.pxzz+m2*pxzz,
                     e.py+m2*py,
                     e.pyy+m2*pyy,
-                    e.pyyy+m2*pyyy,
-                    e.pyyz+m2*pyyz,
                     e.pyz+m2*pyz,
-                    e.pyzz+m2*pyzz,
                     e.pz+m2*pz,
                     e.pzz+m2*pzz,
-                    e.pzzz+m2*pzzz,
                 ) 
                 continue
             end
